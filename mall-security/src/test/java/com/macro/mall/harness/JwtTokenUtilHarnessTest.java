@@ -17,12 +17,15 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 /** JWT round-trip without Spring or Redis. */
 class JwtTokenUtilHarnessTest {
 
+    /** Test-only signing key (not a deployed credential); production keys come from the JWT_SECRET env var. */
+    private static final String TEST_SECRET = "jwt-token-util-test-only-signing-key-0123456789";
+
     private JwtTokenUtil jwtTokenUtil;
 
     @BeforeEach
     void setUp() throws Exception {
         jwtTokenUtil = new JwtTokenUtil();
-        setField("secret", "mall-admin-secret");
+        setField("secret", TEST_SECRET);
         setField("expiration", 604800L);
         setField("tokenHead", "Bearer ");
     }

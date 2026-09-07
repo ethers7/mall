@@ -37,9 +37,19 @@ public class JwtTokenUtil {
     private String tokenHead;
 
     /**
+     * 签名密钥最小长度（字节），防止使用空密钥或过弱的密钥进行HMAC签名
+     */
+    private static final int MIN_SECRET_LENGTH = 32;
+
+    /**
      * 获取签名密钥
+     * 密钥必须通过环境变量（JWT_SECRET）等外部配置提供，源码及配置文件中不允许保留可用的默认密钥
      */
     private byte[] getSigningKey() {
+        if (StrUtil.isBlank(secret) || secret.getBytes(StandardCharsets.UTF_8).length < MIN_SECRET_LENGTH) {
+            throw new IllegalStateException("jwt.secret 未配置或强度不足，请通过环境变量 JWT_SECRET 提供至少 "
+                    + MIN_SECRET_LENGTH + " 字节的随机密钥");
+        }
         return secret.getBytes(StandardCharsets.UTF_8);
     }
 

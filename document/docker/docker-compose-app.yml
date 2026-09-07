@@ -15,6 +15,7 @@ services:
       - /tmp #JVM及内嵌Tomcat临时目录
     environment:
       - 'TZ="Asia/Shanghai"'
+      - JWT_SECRET=${JWT_SECRET:?JWT_SECRET未设置，请提供至少32字节的随机密钥} #JWT签名密钥，由部署环境注入，不允许写入仓库
     external_links:
       - mysql:db #可以用db这个域名访问mysql服务
   mall-search:
@@ -50,6 +51,7 @@ services:
       - /tmp #JVM及内嵌Tomcat临时目录
     environment:
       - 'TZ="Asia/Shanghai"'
+      - JWT_SECRET=${JWT_SECRET:?JWT_SECRET未设置，请提供至少32字节的随机密钥} #JWT签名密钥，由部署环境注入，不允许写入仓库
     external_links:
       - redis:redis #可以用redis这个域名访问redis服务
       - mongo:mongo #可以用mongo这个域名访问mongo服务

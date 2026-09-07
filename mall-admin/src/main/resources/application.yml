@@ -18,7 +18,9 @@ mybatis:
 
 jwt:
   tokenHeader: Authorization #JWT存储的请求头
-  secret: mall-admin-secret #JWT加解密使用的密钥
+  # JWT加解密使用的密钥：必须通过环境变量JWT_SECRET提供（至少32字节随机值），不提供默认值以避免弱密钥
+  # 安全提示：之前提交到仓库中的密钥已泄露在版本历史里，必须重新生成（轮换）后再部署
+  secret: ${JWT_SECRET}
   expiration: 604800 #JWT的超期限时间(60*60*24*7)
   tokenHead: 'Bearer '  #JWT负载中拿到开头
 
