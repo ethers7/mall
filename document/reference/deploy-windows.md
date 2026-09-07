@@ -20,6 +20,12 @@
 - 下载地址：https://dev.mysql.com/downloads/mysql/5.7.html#downloads
 - 下载后按提示进行安装
 - 导入document/sql下的mall.sql文件
+- 注意：出于安全考虑，mall.sql中不再包含示例账号（如`admin`、`member`）的密码散列，示例账号导入后处于“无密码”状态，无法登录。导入时可通过会话变量传入自己生成的BCrypt散列：
+    ``` bash
+    mysql -uroot -p mall --init-command="SET @demo_admin_password='<你的BCrypt散列>'; SET @demo_member_password='<你的BCrypt散列>'" < mall.sql
+    ```
+- 也可在导入后再设置密码，例如：`UPDATE ums_admin SET password='<你的BCrypt散列>' WHERE username='admin';`
+- BCrypt散列可用Spring Security的`new BCryptPasswordEncoder().encode("<你的密码>")`生成
 
 ## redis
 
