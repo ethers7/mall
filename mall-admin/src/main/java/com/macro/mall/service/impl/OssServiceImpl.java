@@ -8,6 +8,7 @@ import com.aliyun.oss.model.MatchMode;
 import com.aliyun.oss.model.PolicyConditions;
 import com.macro.mall.common.exception.Asserts;
 import com.macro.mall.dto.OssCallbackParam;
+import com.macro.mall.dto.OssCallbackRequestParam;
 import com.macro.mall.dto.OssCallbackResult;
 import com.macro.mall.dto.OssPolicyResult;
 import com.macro.mall.service.OssService;
@@ -17,7 +18,6 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
-import jakarta.servlet.http.HttpServletRequest;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.regex.Pattern;
@@ -31,18 +31,12 @@ public class OssServiceImpl implements OssService {
 
 	private static final Logger LOGGER = LoggerFactory.getLogger(OssServiceImpl.class);
 	/**
-	 * 回调中OSS对象名称的白名单格式：只允许字母、数字、常见文件名符号及目录分隔符，
-	 * 不允许出现路径穿越（..）、反斜杠、协议分隔符及URL特殊字符，长度上限与OSS对象名称一致
+	 * 回调参数的白名单格式与{@link OssCallbackRequestParam}上的声明式校验保持一致，
+	 * 在Service层再做一次兜底校验，避免绕过Controller直接调用时使用未校验的数据
 	 */
-	private static final Pattern OSS_OBJECT_NAME_PATTERN = Pattern.compile("^[\\p{L}\\p{N}][\\p{L}\\p{N}\\-._/() ]{0,1022}$");
-	/**
-	 * 回调中mimeType的白名单格式，如image/jpeg
-	 */
-	private static final Pattern MIME_TYPE_PATTERN = Pattern.compile("^[\\p{Alnum}][\\p{Alnum}!#$&^_.+-]{0,63}/[\\p{Alnum}][\\p{Alnum}!#$&^_.+-]{0,63}$");
-	/**
-	 * 回调中数字类参数（文件大小、图片宽高）的白名单格式
-	 */
-	private static final Pattern NUMERIC_PATTERN = Pattern.compile("^\\p{Digit}{1,19}$");
+	private static final Pattern OSS_OBJECT_NAME_PATTERN = Pattern.compile(OssCallbackRequestParam.OBJECT_NAME_REGEX);
+	private static final Pattern MIME_TYPE_PATTERN = Pattern.compile(OssCallbackRequestParam.MIME_TYPE_REGEX);
+	private static final Pattern NUMERIC_PATTERN = Pattern.compile(OssCallbackRequestParam.NUMERIC_REGEX);
 
 	@Value("${aliyun.oss.policy.expire}")
 	private int ALIYUN_OSS_EXPIRE;
@@ -104,16 +98,20 @@ public class OssServiceImpl implements OssService {
 	}
 
 	@Override
-	public OssCallbackResult callback(HttpServletRequest request) {
+	public OssCallbackResult callback(OssCallbackRequestParam callbackParam) {
+		if (callbackParam == null) {
+			LOGGER.warn("OSS回调参数缺失！");
+			Asserts.fail("OSS回调参数不合法！");
+		}
 		OssCallbackResult result= new OssCallbackResult();
-		// 回调参数由外部请求传入，均视为不可信数据，需要先校验再使用
-		String objectName = validateObjectName(request.getParameter("filename"));
+		// 回调参数已在Controller层通过Bean Validation校验，此处再兜底校验一次后才用于拼接访问地址
+		String objectName = validateObjectName(callbackParam.getFilename());
 		String filename = "http://".concat(ALIYUN_OSS_BUCKET_NAME).concat(".").concat(ALIYUN_OSS_ENDPOINT).concat("/").concat(objectName);
 		result.setFilename(filename);
-		result.setSize(validateOptional(request.getParameter("size"), NUMERIC_PATTERN, "size"));
-		result.setMimeType(validateOptional(request.getParameter("mimeType"), MIME_TYPE_PATTERN, "mimeType"));
-		result.setWidth(validateOptional(request.getParameter("width"), NUMERIC_PATTERN, "width"));
-		result.setHeight(validateOptional(request.getParameter("height"), NUMERIC_PATTERN, "height"));
+		result.setSize(validateOptional(callbackParam.getSize(), NUMERIC_PATTERN, "size"));
+		result.setMimeType(validateOptional(callbackParam.getMimeType(), MIME_TYPE_PATTERN, "mimeType"));
+		result.setWidth(validateOptional(callbackParam.getWidth(), NUMERIC_PATTERN, "width"));
+		result.setHeight(validateOptional(callbackParam.getHeight(), NUMERIC_PATTERN, "height"));
 		return result;
 	}
 
