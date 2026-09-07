@@ -7,6 +7,8 @@ echo '----rm container----'
 docker rmi `docker images | grep none | awk '{print $3}'`
 echo '----rm none images----'
 docker run -p 8081:8081 --name ${app_name} \
+--read-only \
+--tmpfs /tmp \
 --link mysql:db \
 --link elasticsearch:es \
 -e TZ="Asia/Shanghai" \
