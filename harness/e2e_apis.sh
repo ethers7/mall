@@ -6,13 +6,98 @@ set -eu
 BASE="${BASE_URL:-http://127.0.0.1:8080}"
 BASE="${BASE%/}"
 ADMIN_USER="${MALL_ADMIN_USER:-admin}"
-# mall.sql 不再包含可用的口令散列；口令必须由环境注入（无提交默认值）。
-# 数据库需先执行 document/sh/init-db-credentials.sh，使用同一口令写入散列。
+# mall.sql 不再包含可用的口令散列（fail-closed）；口令必须由环境注入（无提交默认值）。
+# 本脚本在登录前调用 document/sh/init-db-credentials.sh，用 MALL_ADMIN_PASS
+# 的散列覆盖哨兵值，因此无需在流水线里单独执行播种步骤。
 ADMIN_PASS="${MALL_ADMIN_PASS:-}"
 if [ -z "$ADMIN_PASS" ]; then
-  echo "ERROR: MALL_ADMIN_PASS is not set - seed the DB with document/sh/init-db-credentials.sh and export the same password" >&2
+  echo "ERROR: MALL_ADMIN_PASS is not set - export the admin password (no committed default exists)" >&2
   exit 1
 fi
+
+REPO_ROOT=$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)
+SEED_SCRIPT="${REPO_ROOT}/document/sh/init-db-credentials.sh"
+
+# 探测一个可用的 MySQL 主机：口令通过 MYSQL_PWD 传递，绝不出现在命令行上。
+db_probe() {
+  MYSQL_PWD="$db_pass" mysql \
+    --host="$1" --port="$db_port" --user="$db_user" \
+    --default-character-set=utf8mb4 --batch --skip-column-names \
+    -e 'SELECT 1' "$db_name" >/dev/null 2>&1
+}
+
+# 复用 document/sh/init-db-credentials.sh 完成散列与 UPDATE（不重复实现哈希逻辑）。
+# 该脚本要求 MALL_ADMIN_PASSWORD / MALL_MEMBER_PASSWORD，而流水线提供的是
+# MALL_ADMIN_PASS，因此在这里做映射；e2e 不需要会员登录，会员口令使用一次性随机值。
+seed_admin_credentials() {
+  if [ ! -f "$SEED_SCRIPT" ]; then
+    echo "ERROR: credential seeding script not found: ${SEED_SCRIPT}" >&2
+    return 1
+  fi
+  if ! command -v mysql >/dev/null 2>&1; then
+    echo "ERROR: mysql client not found - install default-mysql-client so the admin password can be seeded" >&2
+    return 1
+  fi
+  if ! command -v bash >/dev/null 2>&1; then
+    echo "ERROR: bash not found - ${SEED_SCRIPT} requires bash" >&2
+    return 1
+  fi
+  if command -v python3 >/dev/null 2>&1 && python3 -c 'import bcrypt' >/dev/null 2>&1; then
+    :
+  elif command -v htpasswd >/dev/null 2>&1; then
+    :
+  else
+    echo "ERROR: no BCrypt hashing tool available (python3 'bcrypt' module or htpasswd) - cannot seed the admin password; install python3-bcrypt (or apache2-utils) in the build step" >&2
+    return 1
+  fi
+
+  db_user="${MYSQL_USER:-root}"
+  db_port="${MYSQL_PORT:-3306}"
+  db_name="${MYSQL_DATABASE:-mall}"
+  db_pass="${MYSQL_PASSWORD:-${MYSQL_PWD:-}}"
+
+  db_host=""
+  for cand in "${MYSQL_HOST:-}" 127.0.0.1 mysql; do
+    [ -n "$cand" ] || continue
+    if db_probe "$cand"; then
+      db_host="$cand"
+      break
+    fi
+  done
+  if [ -z "$db_host" ]; then
+    echo "ERROR: no reachable MySQL for database '${db_name}' as user '${db_user}' (tried ${MYSQL_HOST:+${MYSQL_HOST}, }127.0.0.1, mysql on port ${db_port})" >&2
+    return 1
+  fi
+
+  # 会员账号只需摆脱哨兵值，e2e 不使用；生成一次性随机口令，避免复用管理员口令。
+  member_pass="${MALL_MEMBER_PASS:-}"
+  if [ -z "$member_pass" ] && command -v python3 >/dev/null 2>&1; then
+    member_pass=$(python3 -c 'import secrets; print(secrets.token_urlsafe(24))' 2>/dev/null) || member_pass=""
+  fi
+  if [ -z "$member_pass" ] && [ -r /dev/urandom ]; then
+    member_pass=$(od -An -tx1 -N24 /dev/urandom 2>/dev/null | tr -d ' \n') || member_pass=""
+  fi
+  if [ -z "$member_pass" ]; then
+    echo "ERROR: unable to generate an ephemeral ums_member password - refusing to seed" >&2
+    return 1
+  fi
+
+  if ! MALL_ADMIN_PASSWORD="$ADMIN_PASS" \
+    MALL_MEMBER_PASSWORD="$member_pass" \
+    MYSQL_HOST="$db_host" MYSQL_PORT="$db_port" MYSQL_USER="$db_user" \
+    MYSQL_DATABASE="$db_name" MYSQL_PASSWORD="$db_pass" \
+    bash "$SEED_SCRIPT"; then
+    echo "ERROR: ${SEED_SCRIPT} failed against ${db_host}:${db_port}/${db_name} - admin account still holds the locked sentinel hash" >&2
+    return 1
+  fi
+  echo "==> seeded ums_admin/ums_member password hashes from the environment (${db_host}:${db_port}/${db_name})"
+}
+
+if ! seed_admin_credentials; then
+  echo "ERROR: cannot seed the admin credential - aborting before login to avoid a misleading auth failure" >&2
+  exit 1
+fi
+
 OUTDIR="${E2E_JUNIT_DIR:-test-results}"
 mkdir -p "$OUTDIR"
 OUT="$OUTDIR/functional-junit.xml"
