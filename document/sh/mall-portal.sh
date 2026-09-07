@@ -7,6 +7,9 @@ echo '----rm container----'
 docker rmi `docker images | grep none | awk '{print $3}'`
 echo '----rm none images----'
 docker run -p 8085:8085 --name ${app_name} \
+--read-only \
+--tmpfs /tmp \
+--security-opt no-new-privileges:true \
 --link mysql:db \
 --link redis:redis \
 --link mongo:mongo \

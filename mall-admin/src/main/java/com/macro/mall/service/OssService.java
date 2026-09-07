@@ -1,9 +1,8 @@
 package com.macro.mall.service;
 
+import com.macro.mall.dto.OssCallbackRequestParam;
 import com.macro.mall.dto.OssCallbackResult;
 import com.macro.mall.dto.OssPolicyResult;
-
-import jakarta.servlet.http.HttpServletRequest;
 
 /**
  * Oss对象存储管理Service
@@ -16,6 +15,8 @@ public interface OssService {
     OssPolicyResult policy();
     /**
      * Oss上传成功回调
+     *
+     * @param callbackParam 已在Controller层完成校验的回调参数
      */
-    OssCallbackResult callback(HttpServletRequest request);
+    OssCallbackResult callback(OssCallbackRequestParam callbackParam);
 }

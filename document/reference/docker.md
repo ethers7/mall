@@ -86,6 +86,46 @@ sudo curl -L https://raw.githubusercontent.com/docker/compose/1.22.0/contrib/com
 - 停止相关容器：docker-compose stop eureka
 - 启动相关容器：docker-compose start eureka
 
+### 启动mall环境容器前的准备（document/docker/docker-compose-env.yml）
+`docker-compose-env.yml`中的容器均以只读根文件系统启动（`read_only: true`），需要写入的目录全部单独挂载，
+因此`docker-compose up`之前必须先在宿主机准备好这些目录，并把配置目录初始化好，否则容器会因为无法写入而启动失败。
+#### 一键初始化
+``` bash
+cd document/sh
+sudo bash init-env-config.sh
+```
+该脚本会：
+- 创建下面列出的宿主机目录，并按镜像默认运行用户的uid:gid设置属主（容器内不是root，挂载目录必须对该用户可写）；
+- 从`elasticsearch:7.17.3`、`logstash:7.17.3`、`rabbitmq:3.9.11-management`镜像中导出各自的配置目录到宿主机，
+  这样挂载后镜像内置的`jvm.options`、`log4j2.properties`、`pipelines.yml`、`enabled_plugins`、`conf.d`等文件不会被空目录屏蔽
+  （rabbitmq的management插件与默认配置、elasticsearch与logstash的JVM及日志配置都保持原样）；
+- 把项目维护的`document/elk/logstash.conf`复制到`/mydata/logstash/logstash.conf`；
+- 已存在内容的配置目录会跳过，不会覆盖你在宿主机上做的修改。
+#### 所需的宿主机目录与文件
+| 服务          | 宿主机路径                        | 说明                                                        |
+| ------------- | --------------------------------- | ----------------------------------------------------------- |
+| mysql         | /mydata/mysql/{data,conf,log}     | 数据、配置、日志目录                                        |
+| redis         | /mydata/redis/data                | 数据目录                                                    |
+| nginx         | /mydata/nginx/{conf,html,logs}    | 配置（可复制document/docker/nginx.conf）、静态资源、日志目录 |
+| rabbitmq      | /mydata/rabbitmq/conf             | 配置目录，入口脚本需在此生成配置，须从镜像初始化            |
+| rabbitmq      | /mydata/rabbitmq/{data,logs}      | 数据、日志目录                                              |
+| elasticsearch | /mydata/elasticsearch/config      | 配置目录，启动时需生成elasticsearch.keystore，须从镜像初始化 |
+| elasticsearch | /mydata/elasticsearch/{plugins,data,logs} | 插件、数据、日志目录                                |
+| elasticsearch | /mydata/elasticsearch/tmp         | 临时目录，JNA需要可执行的临时目录，否则seccomp过滤器会被禁用 |
+| logstash      | /mydata/logstash/config           | 配置目录，入口脚本env2yaml会改写logstash.yml，须从镜像初始化 |
+| logstash      | /mydata/logstash/logstash.conf    | 管道配置文件，复制document/elk/logstash.conf                 |
+| logstash      | /mydata/logstash/{data,logs,tmp}  | 数据、日志、临时目录（JRuby需要可执行的临时目录）            |
+| mongo         | /mydata/mongo/db                  | 数据目录                                                    |
+| minio         | /mydata/minio/data                | 数据目录                                                    |
+#### 验证
+``` bash
+docker-compose -f docker-compose-env.yml up -d
+docker ps # 确认没有容器处于重启状态
+docker logs elasticsearch # 确认没有Read-only file system相关报错
+curl http://127.0.0.1:9200 # elasticsearch
+curl -I http://127.0.0.1:15672 # rabbitmq management插件
+```
+
 ### 编排SpringCloud微服务
 #### 所使用到的工程
 - eureka-server
