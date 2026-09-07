@@ -35,6 +35,8 @@ secure:
       - /product/**
       - /brand/**
       - /alipay/**
+  cors:
+    allowed-origins: [] #跨域访问域名白名单，如 https://www.example.com ，默认不允许跨域访问
 
 springdoc:
   swagger-ui:

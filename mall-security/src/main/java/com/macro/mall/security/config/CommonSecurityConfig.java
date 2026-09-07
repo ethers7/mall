@@ -27,6 +27,11 @@ public class CommonSecurityConfig {
     }
 
     @Bean
+    public CorsAllowedOriginsConfig corsAllowedOriginsConfig() {
+        return new CorsAllowedOriginsConfig();
+    }
+
+    @Bean
     public JwtTokenUtil jwtTokenUtil() {
         return new JwtTokenUtil();
     }
