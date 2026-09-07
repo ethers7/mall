@@ -59,7 +59,13 @@ sc=$(code_of -L "${BASE}/swagger-ui/index.html")
 record "swagger_ui_200" "$([ "$sc" = "200" ] && echo 1 || echo 0)" "$sc"
 
 sc=$(code_of "${BASE}/brand/listAll")
-record "brand_list_unauthorized" "$([ "$sc" = "401" ] && echo 1 || echo 0)" "$sc"
+if [ "$sc" = "401" ]; then
+  record "brand_list_unauthorized" 1 "$sc"
+elif grep -q '"code"[[:space:]]*:[[:space:]]*401' "$BODY"; then
+  record "brand_list_unauthorized" 1 "http=${sc} body-code=401"
+else
+  record "brand_list_unauthorized" 0 "http=${sc} $(head -c 180 "$BODY")"
+fi
 
 login_json=$(printf '{"username":"%s","password":"%s"}' "$ADMIN_USER" "$ADMIN_PASS")
 sc=$(code_of -H "Content-Type: application/json" -d "$login_json" "${BASE}/admin/login")
