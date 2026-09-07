@@ -6,6 +6,9 @@ docker rm ${app_name}
 echo '----rm container----'
 docker rmi `docker images | grep none | awk '{print $3}'`
 echo '----rm none images----'
+# 容器内以非root用户(uid 1000)运行，需保证挂载的日志目录对该用户可写
+mkdir -p /mydata/app/${app_name}/logs
+chown -R 1000:1000 /mydata/app/${app_name}/logs
 docker run -p 8080:8080 --name ${app_name} \
 --link mysql:db \
 --link redis:redis \
