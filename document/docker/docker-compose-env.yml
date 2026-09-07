@@ -10,6 +10,8 @@ services:
     ports:
       - 3306:3306
     read_only: true #只读根文件系统，防止容器内文件被篡改
+    security_opt:
+      - no-new-privileges:true #禁止通过setuid/setgid程序提升权限
     volumes:
       - /mydata/mysql/data:/var/lib/mysql #数据文件目录挂载
       - /mydata/mysql/conf:/etc/mysql #配置文件目录挂载
@@ -22,6 +24,8 @@ services:
     container_name: redis
     command: redis-server --appendonly yes
     read_only: true #只读根文件系统，防止容器内文件被篡改
+    security_opt:
+      - no-new-privileges:true #禁止通过setuid/setgid程序提升权限
     volumes:
       - /mydata/redis/data:/data #数据文件目录挂载
     tmpfs:
@@ -32,6 +36,8 @@ services:
     image: nginx:1.22
     container_name: nginx
     read_only: true #只读根文件系统，防止容器内文件被篡改
+    security_opt:
+      - no-new-privileges:true #禁止通过setuid/setgid程序提升权限
     volumes:
       - /mydata/nginx/conf:/etc/nginx #配置文件目录挂载
       - /mydata/nginx/html:/usr/share/nginx/html #静态资源根目录挂载
@@ -46,6 +52,8 @@ services:
     image: rabbitmq:3.9.11-management
     container_name: rabbitmq
     read_only: true #只读根文件系统，防止容器内文件被篡改
+    security_opt:
+      - no-new-privileges:true #禁止通过setuid/setgid程序提升权限
     volumes:
       - /mydata/rabbitmq/data:/var/lib/rabbitmq #数据文件目录挂载
       - rabbitmq-conf:/etc/rabbitmq #启动脚本需要生成配置文件，使用命名卷保留镜像默认配置
@@ -63,6 +71,8 @@ services:
       - "discovery.type=single-node" #以单一节点模式启动
       - "ES_JAVA_OPTS=-Xms512m -Xmx1024m" #设置es使用的jvm内存大小
     read_only: true #只读根文件系统，防止容器内文件被篡改
+    security_opt:
+      - no-new-privileges:true #禁止通过setuid/setgid程序提升权限
     volumes:
       - /mydata/elasticsearch/plugins:/usr/share/elasticsearch/plugins #插件文件目录挂载
       - /mydata/elasticsearch/data:/usr/share/elasticsearch/data #数据文件目录挂载
@@ -79,6 +89,8 @@ services:
     environment:
       - TZ=Asia/Shanghai
     read_only: true #只读根文件系统，防止容器内文件被篡改
+    security_opt:
+      - no-new-privileges:true #禁止通过setuid/setgid程序提升权限
     volumes:
       - /mydata/logstash/logstash.conf:/usr/share/logstash/pipeline/logstash.conf #配置文件挂载
       - logstash-config:/usr/share/logstash/config #启动脚本会写入logstash.yml，使用命名卷保留镜像默认配置
@@ -105,6 +117,8 @@ services:
     environment:
       - "elasticsearch.hosts=http://es:9200" #设置访问elasticsearch的地址
     read_only: true #只读根文件系统，防止容器内文件被篡改
+    security_opt:
+      - no-new-privileges:true #禁止通过setuid/setgid程序提升权限
     volumes:
       - kibana-config:/usr/share/kibana/config #启动脚本会写入kibana.yml，使用命名卷保留镜像默认配置
       - kibana-data:/usr/share/kibana/data #实例数据目录
@@ -116,6 +130,8 @@ services:
     image: mongo:4
     container_name: mongo
     read_only: true #只读根文件系统，防止容器内文件被篡改
+    security_opt:
+      - no-new-privileges:true #禁止通过setuid/setgid程序提升权限
     volumes:
       - /mydata/mongo/db:/data/db #数据文件目录挂载
       - mongo-configdb:/data/configdb #配置数据目录
@@ -128,6 +144,8 @@ services:
     container_name: minio
     command: server /data --console-address ":9001" #指定数据目录及console运行端口启动
     read_only: true #只读根文件系统，防止容器内文件被篡改
+    security_opt:
+      - no-new-privileges:true #禁止通过setuid/setgid程序提升权限
     volumes:
       - /mydata/minio/data:/data #数据目录挂载
     tmpfs:

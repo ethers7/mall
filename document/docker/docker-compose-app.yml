@@ -6,6 +6,8 @@ services:
     ports:
       - 8080:8080
     read_only: true #只读根文件系统，防止容器内文件被篡改
+    security_opt:
+      - no-new-privileges:true #禁止通过setuid/setgid程序提升权限
     volumes:
       - /mydata/app/mall-admin/logs:/var/logs
       - /etc/localtime:/etc/localtime
@@ -21,6 +23,8 @@ services:
     ports:
       - 8081:8081
     read_only: true #只读根文件系统，防止容器内文件被篡改
+    security_opt:
+      - no-new-privileges:true #禁止通过setuid/setgid程序提升权限
     volumes:
       - /mydata/app/mall-search/logs:/var/logs
       - /etc/localtime:/etc/localtime
@@ -37,6 +41,8 @@ services:
     ports:
       - 8085:8085
     read_only: true #只读根文件系统，防止容器内文件被篡改
+    security_opt:
+      - no-new-privileges:true #禁止通过setuid/setgid程序提升权限
     volumes:
       - /mydata/app/mall-portal/logs:/var/logs
       - /etc/localtime:/etc/localtime
