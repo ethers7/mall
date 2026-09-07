@@ -8,6 +8,8 @@ services:
     read_only: true #根文件系统只读，防止容器内文件被篡改
     tmpfs:
       - /tmp #JVM及内嵌Tomcat的临时目录需要可写
+    security_opt:
+      - no-new-privileges:true #禁止容器内进程通过setuid/setgid程序提升权限
     volumes:
       - /mydata/app/mall-admin/logs:/var/logs
       - /etc/localtime:/etc/localtime
@@ -23,6 +25,8 @@ services:
     read_only: true #根文件系统只读，防止容器内文件被篡改
     tmpfs:
       - /tmp #JVM及内嵌Tomcat的临时目录需要可写
+    security_opt:
+      - no-new-privileges:true #禁止容器内进程通过setuid/setgid程序提升权限
     volumes:
       - /mydata/app/mall-search/logs:/var/logs
       - /etc/localtime:/etc/localtime
@@ -39,6 +43,8 @@ services:
     read_only: true #根文件系统只读，防止容器内文件被篡改
     tmpfs:
       - /tmp #JVM及内嵌Tomcat的临时目录需要可写
+    security_opt:
+      - no-new-privileges:true #禁止容器内进程通过setuid/setgid程序提升权限
     volumes:
       - /mydata/app/mall-portal/logs:/var/logs
       - /etc/localtime:/etc/localtime

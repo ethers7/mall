@@ -23,6 +23,7 @@ chown -R 1000:1000 /mydata/app/${app_name}/logs
 docker run -p 8080:8080 --name ${app_name} \
 --read-only \
 --tmpfs /tmp \
+--security-opt no-new-privileges:true \
 --link mysql:db \
 --link redis:redis \
 -e 'spring.profiles.active'=${profile_active} \

@@ -9,6 +9,8 @@ services:
     tmpfs:
       - /tmp #排序、临时表等临时文件目录
       - /var/run/mysqld #socket与pid文件目录
+    security_opt:
+      - no-new-privileges:true #禁止容器内进程通过setuid/setgid程序提升权限（入口脚本降权不受影响）
     environment:
       MYSQL_ROOT_PASSWORD: root #设置root帐号密码
     ports:
@@ -24,6 +26,8 @@ services:
     read_only: true #根文件系统只读，数据目录已单独挂载
     tmpfs:
       - /tmp #临时文件目录
+    security_opt:
+      - no-new-privileges:true #禁止容器内进程通过setuid/setgid程序提升权限（入口脚本降权不受影响）
     volumes:
       - /mydata/redis/data:/data #数据文件目录挂载
     ports:
@@ -35,6 +39,8 @@ services:
     tmpfs:
       - /var/cache/nginx #请求与代理临时文件目录
       - /var/run #nginx.pid所在目录
+    security_opt:
+      - no-new-privileges:true #禁止容器内进程通过setuid/setgid程序提升权限（worker降权不受影响）
     volumes:
       - /mydata/nginx/conf:/etc/nginx #配置文件目录挂载
       - /mydata/nginx/html:/usr/share/nginx/html #静态资源根目录挂载
@@ -45,6 +51,8 @@ services:
     #未设置read_only：启动脚本会在/etc/rabbitmq下生成配置，而用tmpfs覆盖该目录会隐藏镜像内置的enabled_plugins导致management插件失效
     image: rabbitmq:3.9.11-management
     container_name: rabbitmq
+    security_opt:
+      - no-new-privileges:true #禁止容器内进程通过setuid/setgid程序提升权限（入口脚本降权不受影响）
     volumes:
       - /mydata/rabbitmq/data:/var/lib/rabbitmq #数据文件目录挂载
     ports:
@@ -54,6 +62,8 @@ services:
     #未设置read_only：启动时需在config目录生成elasticsearch.keystore，该目录未挂载，只读根文件系统会导致启动失败
     image: elasticsearch:7.17.3
     container_name: elasticsearch
+    security_opt:
+      - no-new-privileges:true #禁止容器内进程通过setuid/setgid程序提升权限（入口脚本降权不受影响）
     environment:
       - "cluster.name=elasticsearch" #设置集群名称为elasticsearch
       - "discovery.type=single-node" #以单一节点模式启动
@@ -68,6 +78,8 @@ services:
     #未设置read_only：入口脚本env2yaml会改写config/logstash.yml，只读根文件系统会导致启动失败
     image: logstash:7.17.3
     container_name: logstash
+    security_opt:
+      - no-new-privileges:true #禁止容器内进程通过setuid/setgid程序提升权限（入口脚本降权不受影响）
     environment:
       - TZ=Asia/Shanghai
     volumes:
@@ -88,6 +100,8 @@ services:
     tmpfs:
       - /tmp #临时文件目录
       - /usr/share/kibana/data #uuid等运行时数据目录
+    security_opt:
+      - no-new-privileges:true #禁止容器内进程通过setuid/setgid程序提升权限（入口脚本降权不受影响）
     links:
       - elasticsearch:es #可以用es这个域名访问elasticsearch服务
     depends_on:
@@ -102,6 +116,8 @@ services:
     read_only: true #根文件系统只读，数据目录已单独挂载
     tmpfs:
       - /tmp #mongod的unix socket及临时文件目录
+    security_opt:
+      - no-new-privileges:true #禁止容器内进程通过setuid/setgid程序提升权限（入口脚本降权不受影响）
     volumes:
       - /mydata/mongo/db:/data/db #数据文件目录挂载
     ports:
@@ -114,6 +130,8 @@ services:
     tmpfs:
       - /tmp #临时文件目录
       - /root/.minio #启动时创建的证书与本地配置目录
+    security_opt:
+      - no-new-privileges:true #禁止容器内进程通过setuid/setgid程序提升权限
     volumes:
       - /mydata/minio/data:/data #数据目录挂载
     environment:

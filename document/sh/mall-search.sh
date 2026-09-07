@@ -9,6 +9,7 @@ echo '----rm none images----'
 docker run -p 8081:8081 --name ${app_name} \
 --read-only \
 --tmpfs /tmp \
+--security-opt no-new-privileges:true \
 --link mysql:db \
 --link elasticsearch:es \
 -e TZ="Asia/Shanghai" \
