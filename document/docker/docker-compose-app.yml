@@ -5,11 +5,17 @@ services:
     container_name: mall-admin
     ports:
       - 8080:8080
+    read_only: true #只读根文件系统，防止容器内文件被篡改
+    security_opt:
+      - no-new-privileges:true #禁止通过setuid/setgid程序提升权限
     volumes:
       - /mydata/app/mall-admin/logs:/var/logs
       - /etc/localtime:/etc/localtime
+    tmpfs:
+      - /tmp #JVM及内嵌Tomcat临时目录
     environment:
       - 'TZ="Asia/Shanghai"'
+      - JWT_SECRET=${JWT_SECRET:?JWT_SECRET未设置，请提供至少32字节的随机密钥} #JWT签名密钥，由部署环境注入，不允许写入仓库
     external_links:
       - mysql:db #可以用db这个域名访问mysql服务
   mall-search:
@@ -17,9 +23,14 @@ services:
     container_name: mall-search
     ports:
       - 8081:8081
+    read_only: true #只读根文件系统，防止容器内文件被篡改
+    security_opt:
+      - no-new-privileges:true #禁止通过setuid/setgid程序提升权限
     volumes:
       - /mydata/app/mall-search/logs:/var/logs
       - /etc/localtime:/etc/localtime
+    tmpfs:
+      - /tmp #JVM及内嵌Tomcat临时目录
     environment:
       - 'TZ="Asia/Shanghai"'
     external_links:
@@ -30,11 +41,17 @@ services:
     container_name: mall-portal
     ports:
       - 8085:8085
+    read_only: true #只读根文件系统，防止容器内文件被篡改
+    security_opt:
+      - no-new-privileges:true #禁止通过setuid/setgid程序提升权限
     volumes:
       - /mydata/app/mall-portal/logs:/var/logs
       - /etc/localtime:/etc/localtime
+    tmpfs:
+      - /tmp #JVM及内嵌Tomcat临时目录
     environment:
       - 'TZ="Asia/Shanghai"'
+      - JWT_SECRET=${JWT_SECRET:?JWT_SECRET未设置，请提供至少32字节的随机密钥} #JWT签名密钥，由部署环境注入，不允许写入仓库
     external_links:
       - redis:redis #可以用redis这个域名访问redis服务
       - mongo:mongo #可以用mongo这个域名访问mongo服务

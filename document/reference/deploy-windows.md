@@ -20,6 +20,8 @@
 - 下载地址：https://dev.mysql.com/downloads/mysql/5.7.html#downloads
 - 下载后按提示进行安装
 - 导入document/sql下的mall.sql文件
+- mall.sql中不包含可用的口令散列（账号默认锁定），导入后需设置口令：
+  设置环境变量`MALL_ADMIN_PASSWORD`、`MALL_MEMBER_PASSWORD`后执行`document/sh/init-db-credentials.sh`
 
 ## redis
 

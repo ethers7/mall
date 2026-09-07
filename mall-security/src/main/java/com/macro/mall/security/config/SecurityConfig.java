@@ -28,6 +28,8 @@ public class SecurityConfig {
     @Autowired
     private IgnoreUrlsConfig ignoreUrlsConfig;
     @Autowired
+    private CorsAllowedOriginsConfig corsAllowedOriginsConfig;
+    @Autowired
     private RestfulAccessDeniedHandler restfulAccessDeniedHandler;
     @Autowired
     private RestAuthenticationEntryPoint restAuthenticationEntryPoint;
@@ -60,6 +62,14 @@ public class SecurityConfig {
         .exceptionHandling(configurer -> configurer.accessDeniedHandler(restfulAccessDeniedHandler).authenticationEntryPoint(restAuthenticationEntryPoint))
         //自定义权限拦截器JWT过滤器
         .addFilterBefore(jwtAuthenticationTokenFilter, UsernamePasswordAuthenticationFilter.class);
+        //跨域访问统一由SpringSecurity的跨域过滤器处理，该过滤器位于异常处理之前，认证失败与鉴权失败的响应同样会带上跨域响应头
+        if (corsAllowedOriginsConfig.hasAllowedOrigins()) {
+            //仅对白名单中配置的具体域名放行跨域访问
+            httpSecurity.cors(configurer -> configurer.configurationSource(corsAllowedOriginsConfig.corsConfigurationSource()));
+        } else {
+            //未配置白名单时不开启跨域访问
+            httpSecurity.cors(AbstractHttpConfigurer::disable);
+        }
         return httpSecurity.build();
     }
 

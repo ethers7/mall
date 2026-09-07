@@ -17,6 +17,10 @@ echo '----rm image----'
 # 打包编译docker镜像
 docker build -t ${group_name}/${app_name}:${app_version} .
 echo '----build image----'
+# 容器内以非root用户(1000:1000)运行，需保证挂载的日志目录可写
+mkdir -p /mydata/app/${app_name}/logs
+chown -R 1000:1000 /mydata/app/${app_name}/logs
+echo '----prepare logs dir----'
 docker run -p 8080:8080 --name ${app_name} \
 --link mysql:db \
 --link redis:redis \
