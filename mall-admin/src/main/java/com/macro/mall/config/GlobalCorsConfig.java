@@ -1,9 +1,9 @@
 package com.macro.mall.config;
 
+import com.macro.mall.security.config.AllowedOriginsCorsConfigurationSource;
+import com.macro.mall.security.config.CorsAllowedOriginsConfig;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.web.cors.CorsConfiguration;
-import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 import org.springframework.web.filter.CorsFilter;
 
 /**
@@ -15,20 +15,11 @@ public class GlobalCorsConfig {
 
     /**
      * 允许跨域调用的过滤器
+     * 只对来源白名单(secure.cors.allowed-origins)内的来源开放跨域及跨域携带cookie，
+     * 白名单为空时不开放跨域访问，同源请求和不带Origin的请求不受影响
      */
     @Bean
-    public CorsFilter corsFilter() {
-        CorsConfiguration config = new CorsConfiguration();
-        //允许所有域名进行跨域调用
-        config.addAllowedOriginPattern("*");
-        //允许跨越发送cookie
-        config.setAllowCredentials(true);
-        //放行全部原始头信息
-        config.addAllowedHeader("*");
-        //允许所有请求方法跨域调用
-        config.addAllowedMethod("*");
-        UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
-        source.registerCorsConfiguration("/**", config);
-        return new CorsFilter(source);
+    public CorsFilter corsFilter(CorsAllowedOriginsConfig corsAllowedOriginsConfig) {
+        return new CorsFilter(new AllowedOriginsCorsConfigurationSource(corsAllowedOriginsConfig));
     }
 }

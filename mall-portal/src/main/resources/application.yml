@@ -20,7 +20,9 @@ jwt:
 
 secure:
   cors:
-    #允许跨域访问的前端来源白名单，如：['https://portal.example.com']，为空时不返回跨域响应头
+    #允许跨域访问的前端来源白名单，如：['https://portal.example.com']
+    #全局跨域过滤器和Security异常响应都只对白名单内的来源返回跨域响应头，
+    #为空时不开放跨域访问（同源请求及不带Origin的请求不受影响）
     allowed-origins: []
   ignored:
     urls: #安全路径白名单
