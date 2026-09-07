@@ -6,7 +6,13 @@ set -eu
 BASE="${BASE_URL:-http://127.0.0.1:8080}"
 BASE="${BASE%/}"
 ADMIN_USER="${MALL_ADMIN_USER:-admin}"
-ADMIN_PASS="${MALL_ADMIN_PASS:-macro123}"
+# mall.sql 不再包含可用的口令散列；口令必须由环境注入（无提交默认值）。
+# 数据库需先执行 document/sh/init-db-credentials.sh，使用同一口令写入散列。
+ADMIN_PASS="${MALL_ADMIN_PASS:-}"
+if [ -z "$ADMIN_PASS" ]; then
+  echo "ERROR: MALL_ADMIN_PASS is not set - seed the DB with document/sh/init-db-credentials.sh and export the same password" >&2
+  exit 1
+fi
 OUTDIR="${E2E_JUNIT_DIR:-test-results}"
 mkdir -p "$OUTDIR"
 OUT="$OUTDIR/functional-junit.xml"
