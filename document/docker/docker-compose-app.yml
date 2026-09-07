@@ -5,9 +5,12 @@ services:
     container_name: mall-admin
     ports:
       - 8080:8080
+    read_only: true #只读根文件系统，防止容器内文件被篡改
     volumes:
       - /mydata/app/mall-admin/logs:/var/logs
       - /etc/localtime:/etc/localtime
+    tmpfs:
+      - /tmp #JVM及内嵌Tomcat临时目录
     environment:
       - 'TZ="Asia/Shanghai"'
     external_links:
@@ -17,9 +20,12 @@ services:
     container_name: mall-search
     ports:
       - 8081:8081
+    read_only: true #只读根文件系统，防止容器内文件被篡改
     volumes:
       - /mydata/app/mall-search/logs:/var/logs
       - /etc/localtime:/etc/localtime
+    tmpfs:
+      - /tmp #JVM及内嵌Tomcat临时目录
     environment:
       - 'TZ="Asia/Shanghai"'
     external_links:
@@ -30,9 +36,12 @@ services:
     container_name: mall-portal
     ports:
       - 8085:8085
+    read_only: true #只读根文件系统，防止容器内文件被篡改
     volumes:
       - /mydata/app/mall-portal/logs:/var/logs
       - /etc/localtime:/etc/localtime
+    tmpfs:
+      - /tmp #JVM及内嵌Tomcat临时目录
     environment:
       - 'TZ="Asia/Shanghai"'
     external_links:
