@@ -48,20 +48,24 @@ services:
     ports:
       - 80:80
   rabbitmq:
-    #未设置read_only：启动脚本会在/etc/rabbitmq下生成配置，而用tmpfs覆盖该目录会隐藏镜像内置的enabled_plugins导致management插件失效
     image: rabbitmq:3.9.11-management
     container_name: rabbitmq
+    read_only: true #根文件系统只读，配置、数据、日志目录已单独挂载
+    tmpfs:
+      - /tmp #Erlang运行时临时文件目录
     security_opt:
       - no-new-privileges:true #禁止容器内进程通过setuid/setgid程序提升权限（入口脚本降权不受影响）
     volumes:
+      - /mydata/rabbitmq/conf:/etc/rabbitmq #配置文件目录挂载，入口脚本需在此生成配置（先执行document/sh/init-env-config.sh，从镜像中导出enabled_plugins与conf.d默认配置，management插件与默认配置不会被屏蔽）
       - /mydata/rabbitmq/data:/var/lib/rabbitmq #数据文件目录挂载
+      - /mydata/rabbitmq/logs:/var/log/rabbitmq #日志文件目录挂载
     ports:
       - 5672:5672
       - 15672:15672
   elasticsearch:
-    #未设置read_only：启动时需在config目录生成elasticsearch.keystore，该目录未挂载，只读根文件系统会导致启动失败
     image: elasticsearch:7.17.3
     container_name: elasticsearch
+    read_only: true #根文件系统只读，配置、插件、数据、日志与临时目录已单独挂载
     security_opt:
       - no-new-privileges:true #禁止容器内进程通过setuid/setgid程序提升权限（入口脚本降权不受影响）
     environment:
@@ -69,21 +73,28 @@ services:
       - "discovery.type=single-node" #以单一节点模式启动
       - "ES_JAVA_OPTS=-Xms512m -Xmx1024m" #设置es使用的jvm内存大小
     volumes:
+      - /mydata/elasticsearch/config:/usr/share/elasticsearch/config #配置文件目录挂载，启动时需在此生成elasticsearch.keystore（先执行document/sh/init-env-config.sh，从镜像中导出elasticsearch.yml、jvm.options、log4j2.properties，镜像内置配置不会被屏蔽）
       - /mydata/elasticsearch/plugins:/usr/share/elasticsearch/plugins #插件文件目录挂载
       - /mydata/elasticsearch/data:/usr/share/elasticsearch/data #数据文件目录挂载
+      - /mydata/elasticsearch/logs:/usr/share/elasticsearch/logs #日志文件目录挂载
+      - /mydata/elasticsearch/tmp:/tmp #临时目录挂载，JNA需要可执行的临时目录，否则seccomp系统调用过滤器会被禁用
     ports:
       - 9200:9200
       - 9300:9300
   logstash:
-    #未设置read_only：入口脚本env2yaml会改写config/logstash.yml，只读根文件系统会导致启动失败
     image: logstash:7.17.3
     container_name: logstash
+    read_only: true #根文件系统只读，配置、数据、日志与临时目录已单独挂载
     security_opt:
       - no-new-privileges:true #禁止容器内进程通过setuid/setgid程序提升权限（入口脚本降权不受影响）
     environment:
       - TZ=Asia/Shanghai
     volumes:
+      - /mydata/logstash/config:/usr/share/logstash/config #配置文件目录挂载，入口脚本env2yaml会改写其中的logstash.yml（先执行document/sh/init-env-config.sh，从镜像中导出logstash.yml、pipelines.yml、jvm.options、log4j2.properties，镜像内置配置不会被屏蔽）
       - /mydata/logstash/logstash.conf:/usr/share/logstash/pipeline/logstash.conf #配置文件挂载
+      - /mydata/logstash/data:/usr/share/logstash/data #数据文件目录挂载
+      - /mydata/logstash/logs:/usr/share/logstash/logs #日志文件目录挂载
+      - /mydata/logstash/tmp:/tmp #临时目录挂载，JRuby需要可执行的临时目录释放本地库
     depends_on:
       - elasticsearch #kibana在elasticsearch启动之后再启动
     links:
