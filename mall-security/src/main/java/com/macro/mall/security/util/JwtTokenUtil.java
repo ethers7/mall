@@ -2,7 +2,10 @@ package com.macro.mall.security.util;
 
 import cn.hutool.core.date.DateUtil;
 import cn.hutool.core.util.StrUtil;
-import cn.hutool.jwt.JWTUtil;
+import cn.hutool.jwt.JWT;
+import cn.hutool.jwt.JWTHeader;
+import cn.hutool.jwt.signers.JWTSigner;
+import cn.hutool.jwt.signers.JWTSignerUtil;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
@@ -42,6 +45,12 @@ public class JwtTokenUtil {
     private static final int MIN_SECRET_LENGTH = 32;
 
     /**
+     * 服务端固定使用的签名算法标识，签发和校验都只允许该算法，
+     * 防止客户端通过token头部的alg字段指定算法（如alg=none或降级为其它算法）绕过签名校验
+     */
+    private static final String SIGN_ALGORITHM_ID = "HS512";
+
+    /**
      * 获取签名密钥
      * 密钥必须通过环境变量（JWT_SECRET）等外部配置提供，源码及配置文件中不允许保留可用的默认密钥
      */
@@ -54,13 +63,24 @@ public class JwtTokenUtil {
     }
 
     /**
+     * 获取签名器，算法由服务端固定为HS512，不使用token中声明的算法
+     */
+    private JWTSigner getSigner() {
+        return JWTSignerUtil.hs512(getSigningKey());
+    }
+
+    /**
      * 根据负责生成JWT的token
      */
     private String generateToken(Map<String, Object> claims) {
         // 设置过期时间
         long expireTime = System.currentTimeMillis() + expiration * 1000;
         claims.put("exp", expireTime);
-        return JWTUtil.createToken(claims, getSigningKey());
+        return JWT.create()
+                .setHeader(JWTHeader.ALGORITHM, SIGN_ALGORITHM_ID)
+                .addPayloads(claims)
+                .setSigner(getSigner())
+                .sign();
     }
 
     /**
@@ -68,15 +88,22 @@ public class JwtTokenUtil {
      */
     private Map<String, Object> getPayloadFromToken(String token) {
         try {
-            // 验证token签名
-            if (!JWTUtil.verify(token, getSigningKey())) {
-                LOGGER.info("JWT签名验证失败:{}", token);
+            JWT jwt = JWT.of(token);
+            // 只接受服务端签发时使用的算法，拒绝alg=none等由客户端指定的算法，防止算法混淆导致的签名绕过
+            Object algorithm = jwt.getHeader(JWTHeader.ALGORITHM);
+            if (algorithm == null || !SIGN_ALGORITHM_ID.equalsIgnoreCase(algorithm.toString())) {
+                LOGGER.info("JWT签名算法不被支持");
+                return null;
+            }
+            // 使用服务端固定的签名器验证token签名
+            if (!jwt.setSigner(getSigner()).verify()) {
+                LOGGER.info("JWT签名验证失败");
                 return null;
             }
             // 解析token payload
-            return JWTUtil.parseToken(token).getPayloads();
+            return jwt.getPayloads();
         } catch (Exception e) {
-            LOGGER.info("JWT格式验证失败:{}", token);
+            LOGGER.info("JWT格式验证失败");
             return null;
         }
     }
@@ -117,10 +144,11 @@ public class JwtTokenUtil {
                 return true;
             }
             Object exp = payload.get("exp");
-            if (exp == null) {
-                return false;
+            if (!(exp instanceof Number)) {
+                // 缺少或非法的过期时间视为已过期，避免出现永不过期的token
+                return true;
             }
-            long expTime = exp instanceof Long ? (Long) exp : ((Number) exp).longValue();
+            long expTime = ((Number) exp).longValue();
             return expTime < System.currentTimeMillis();
         } catch (Exception e) {
             return true;
