@@ -43,10 +43,6 @@ public class AlipayServiceImpl implements AlipayService {
      * 异步回调处理失败时返回给支付宝的结果
      */
     private static final String NOTIFY_FAILURE = "failure";
-    /**
-     * 支付宝公钥未配置时配置文件中的占位值
-     */
-    private static final String ALIPAY_PUBLIC_KEY_PLACEHOLDER = "your alipayPublicKey";
 
     @Autowired
     private AlipayConfig alipayConfig;
@@ -89,10 +85,11 @@ public class AlipayServiceImpl implements AlipayService {
 
     @Override
     public String notify(Map<String, String> params) {
-        //支付宝公钥是认证异步回调来源的唯一凭据，未配置或仍为占位值时无法完成验签，
-        //此处直接失败关闭，避免验签始终异常却被忽略、订单被伪造的回调置为已支付
+        //支付宝公钥是认证异步回调来源的唯一凭据，未配置（缺失或为空）时无法完成验签，
+        //此处直接失败关闭，避免验签始终异常却被忽略、订单被伪造的回调置为已支付；
+        //公钥由部署环境注入（配置项alipay.alipayPublicKey），配置文件中不提供任何默认值
         String alipayPublicKey = StrUtil.trim(alipayConfig.getAlipayPublicKey());
-        if (StrUtil.isEmpty(alipayPublicKey) || ALIPAY_PUBLIC_KEY_PLACEHOLDER.equals(alipayPublicKey)) {
+        if (StrUtil.isEmpty(alipayPublicKey)) {
             log.error("支付宝公钥未配置，无法校验支付回调签名，拒绝处理支付回调！");
             return NOTIFY_FAILURE;
         }

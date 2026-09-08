@@ -5,6 +5,7 @@ import cn.hutool.core.util.StrUtil;
 import cn.hutool.jwt.JWT;
 import cn.hutool.jwt.JWTHeader;
 import cn.hutool.jwt.JWTUtil;
+import cn.hutool.jwt.RegisteredPayload;
 import cn.hutool.jwt.signers.JWTSigner;
 import cn.hutool.jwt.signers.JWTSignerUtil;
 import org.slf4j.Logger;
@@ -32,7 +33,14 @@ import java.util.Map;
  */
 public class JwtTokenUtil {
     private static final Logger LOGGER = LoggerFactory.getLogger(JwtTokenUtil.class);
-    private static final String CLAIM_KEY_USERNAME = "sub";
+    /**
+     * 登录用户名使用JWT标准中已注册的sub（Subject）声明，直接引用Hutool中的常量，
+     * 避免手写协议字段名出现拼写错误
+     */
+    private static final String CLAIM_KEY_USERNAME = RegisteredPayload.SUBJECT;
+    /**
+     * token创建时间为本项目自定义的声明，JWT标准中无对应的已注册声明名
+     */
     private static final String CLAIM_KEY_CREATED = "created";
     /**
      * 签发和校验token时固定使用的签名算法标识

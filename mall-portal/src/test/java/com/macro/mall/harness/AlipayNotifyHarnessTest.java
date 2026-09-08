@@ -36,6 +36,7 @@ import java.util.Map;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
@@ -187,9 +188,19 @@ class AlipayNotifyHarnessTest {
     }
 
     @Test
-    void unconfiguredAlipayPublicKeyRejectsNotify() throws Exception {
+    void absentAlipayPublicKeyRejectsNotify() throws Exception {
         Map<String, String> params = signedNotifyParams("SHA256withRSA", "RSA2");
-        alipayConfig.setAlipayPublicKey("your alipayPublicKey");
+        //配置文件不再提供任何默认（占位）公钥，未注入时公钥为null，必须拒绝回调
+        alipayConfig.setAlipayPublicKey(null);
+        assertEquals("failure", alipayServiceImpl.notify(params));
+        verifyNoInteractions(orderMapper, portalOrderService);
+    }
+
+    @Test
+    void emptyAlipayPublicKeyRejectsNotify() throws Exception {
+        Map<String, String> params = signedNotifyParams("SHA256withRSA", "RSA2");
+        //环境变量未设置时占位符解析为空字符串，同样必须拒绝回调
+        alipayConfig.setAlipayPublicKey("");
         assertEquals("failure", alipayServiceImpl.notify(params));
         verifyNoInteractions(orderMapper, portalOrderService);
     }
@@ -224,6 +235,20 @@ class AlipayNotifyHarnessTest {
         params.put("total_amount", "0.01");
         assertEquals("failure", alipayServiceImpl.notify(params));
         verifyNoInteractions(orderMapper, portalOrderService);
+    }
+
+    @Test
+    void defaultSignTypeIsRsa2() {
+        //签名算法默认值取自支付宝SDK常量，实际下发到网关的值必须是RSA2
+        assertEquals("RSA2", new AlipayConfig().getSignType());
+    }
+
+    @Test
+    void insecureSignTypeFailsStartup() {
+        AlipayConfig config = new AlipayConfig();
+        //旧版RSA（SHA1withRSA）等不安全算法必须在启动阶段被拒绝
+        config.setSignType("RSA");
+        assertThrows(IllegalStateException.class, config::validateSignType);
     }
 
     @Test

@@ -1,5 +1,6 @@
 package com.macro.mall.portal.config;
 
+import com.alipay.api.AlipayConstants;
 import jakarta.annotation.PostConstruct;
 import lombok.Getter;
 import lombok.Setter;
@@ -55,7 +56,7 @@ public class AlipayConfig {
      * 生成签名字符串所使用的签名算法类型
      * 只支持RSA2（SHA256withRSA），旧版RSA为SHA1withRSA，摘要算法已不安全
      */
-    private String signType = "RSA2";
+    private String signType = AlipayConstants.SIGN_TYPE_RSA2;
 
     /**
      * 校验签名算法配置，被配置为RSA2以外的值（如使用SHA1withRSA的旧版RSA）时启动失败，
@@ -63,7 +64,7 @@ public class AlipayConfig {
      */
     @PostConstruct
     public void validateSignType() {
-        if (!"RSA2".equals(signType)) {
+        if (!AlipayConstants.SIGN_TYPE_RSA2.equals(signType)) {
             throw new IllegalStateException("支付宝签名算法配置不安全：alipay.signType只支持RSA2（SHA256withRSA）");
         }
     }
