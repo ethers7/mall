@@ -20,6 +20,10 @@
 - 下载地址：https://dev.mysql.com/downloads/mysql/5.7.html#downloads
 - 下载后按提示进行安装
 - 导入document/sql下的mall.sql文件
+- 注意：mall.sql中不包含任何密码哈希，导入后所有账号密码为占位符`!LOCKED`，无法直接登录
+- 设置账号密码（由环境变量提供，在运行时生成BCrypt哈希写入数据库）：
+`MALL_DB_PASSWORD='数据库密码' MALL_ADMIN_PASS='后台账号密码' bash document/sh/seed-credentials.sh`
+- 更多环境变量说明参考项目根目录README.md的「搭建步骤」章节
 
 ## redis
 

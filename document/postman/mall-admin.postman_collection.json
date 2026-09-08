@@ -72,9 +72,9 @@
 				],
 				"body": {
 					"mode": "raw",
-					"raw": "{\r\n  \"password\": \"123456\",\r\n  \"username\": \"admin\"\r\n}"
+					"raw": "{\r\n  \"password\": \"{{admin.password}}\",\r\n  \"username\": \"admin\"\r\n}"
 				},
-				"description": ""
+				"description": "mall.sql中不包含密码哈希，账号导入后为锁定状态；请先执行document/sh/seed-credentials.sh（环境变量MALL_ADMIN_PASS）设置密码，并将同一密码写入Postman环境变量admin.password，请勿将真实密码提交到仓库。"
 			},
 			"response": []
 		},

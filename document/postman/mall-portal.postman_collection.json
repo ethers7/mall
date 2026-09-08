@@ -30,8 +30,8 @@
 						},
 						{
 							"key": "password",
-							"value": "123",
-							"description": "",
+							"value": "{{portal.password}}",
+							"description": "mall.sql中不包含密码哈希，会员账号导入后为锁定状态；请先执行document/sh/seed-credentials.sh（环境变量MALL_MEMBER_USER/MALL_MEMBER_PASS）设置密码，并将同一密码写入Postman环境变量portal.password，请勿将真实密码提交到仓库。",
 							"type": "text"
 						}
 					]

@@ -179,6 +179,38 @@ mall
 
 ### 搭建步骤
 
+> 初始化数据库与账号密码
+
+- 导入`document/sql/mall.sql`创建数据库及初始数据;
+- 注意：为避免硬编码凭证进入代码仓库，`mall.sql`中不再包含任何密码哈希，导入后所有后台账号（`ums_admin`）与会员账号（`ums_member`）的密码均为占位符`!LOCKED`，此时无法登录;
+- 执行`document/sh/seed-credentials.sh`，由环境变量提供的密码在运行时生成BCrypt哈希并写入数据库（需要`mysql`客户端，以及`python3`的`bcrypt`/`passlib`模块或`htpasswd`用于生成哈希）:
+
+    ``` bash
+    MALL_DB_PASSWORD='数据库密码' \
+    MALL_ADMIN_PASS='后台账号密码' \
+    MALL_MEMBER_PASS='会员账号密码' \
+      bash document/sh/seed-credentials.sh
+    ```
+
+- 支持的环境变量:
+
+| 环境变量         | 说明                                          | 默认值    |
+| ---------------- | --------------------------------------------- | --------- |
+| MALL_DB_HOST     | 数据库地址                                     | 127.0.0.1 |
+| MALL_DB_PORT     | 数据库端口                                     | 3306      |
+| MALL_DB_NAME     | 数据库名                                       | mall      |
+| MALL_DB_USER     | 数据库用户                                     | root      |
+| MALL_DB_PASSWORD | 数据库密码（必填）                              | 无        |
+| MALL_ADMIN_USER  | 需要设置密码的后台账号，多个用逗号分隔            | admin     |
+| MALL_ADMIN_PASS  | 后台账号密码（不填则跳过后台账号）                | 无        |
+| MALL_MEMBER_USER | 需要设置密码的会员账号，多个用逗号分隔            | member    |
+| MALL_MEMBER_PASS | 会员账号密码（不填则跳过会员账号）                | 无        |
+| MALL_REDIS_HOST  | Redis地址，用于清理已缓存的后台用户信息（可选）    | 127.0.0.1 |
+| MALL_REDIS_PORT  | Redis端口（可选）                              | 6379      |
+
+- 其余演示账号（如`test`、`macro`、`productAdmin`等）默认保持锁定状态，需要时通过`MALL_ADMIN_USER`/`MALL_MEMBER_USER`指定后重新执行脚本即可;
+- 接口冒烟脚本`harness/e2e_apis.sh`同样使用`MALL_ADMIN_USER`/`MALL_ADMIN_PASS`，不再内置默认密码;提供`MALL_DB_PASSWORD`时会自动调用上述脚本完成账号密码初始化。
+
 > Windows环境部署
 
 - Windows环境搭建请参考：[mall在Windows环境下的部署](https://www.macrozheng.com/mall/deploy/mall_deploy_windows.html);
