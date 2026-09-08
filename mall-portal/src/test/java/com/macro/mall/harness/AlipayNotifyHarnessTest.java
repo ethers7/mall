@@ -1,5 +1,7 @@
 package com.macro.mall.harness;
 
+import com.macro.mall.common.api.CommonResult;
+import com.macro.mall.common.api.ResultCode;
 import com.macro.mall.portal.controller.AlipayController;
 import com.macro.mall.portal.domain.AliPayParam;
 import com.macro.mall.portal.service.AlipayService;
@@ -15,13 +17,16 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-/** 支付宝异步回调参数校验单元测试 — no Spring context, no network. */
+/** 支付宝异步回调、交易查询参数校验单元测试 — no Spring context, no network. */
 class AlipayNotifyHarnessTest {
 
     /** 记录是否真正调用到了签名校验/订单处理流程 */
     private static class RecordingAlipayService implements AlipayService {
         private Map<String, String> notifyParams;
         private boolean notifyCalled;
+        private boolean queryCalled;
+        private String queryOutTradeNo;
+        private String queryTradeNo;
 
         @Override
         public String pay(AliPayParam aliPayParam) {
@@ -37,7 +42,10 @@ class AlipayNotifyHarnessTest {
 
         @Override
         public String query(String outTradeNo, String tradeNo) {
-            throw new UnsupportedOperationException();
+            queryCalled = true;
+            queryOutTradeNo = outTradeNo;
+            queryTradeNo = tradeNo;
+            return "TRADE_SUCCESS";
         }
 
         @Override
@@ -146,5 +154,52 @@ class AlipayNotifyHarnessTest {
         request.setParameter("sign", "TWFjcm9NYWxsU2lnbmF0dXJlPT0=");
         assertEquals("success", alipayController.notify(request));
         assertTrue(alipayService.notifyCalled);
+    }
+
+    @Test
+    void validQueryParamsReachAlipay() {
+        CommonResult<String> result = alipayController.query("202406150101000001", null);
+        assertEquals(ResultCode.SUCCESS.getCode(), result.getCode());
+        assertEquals("TRADE_SUCCESS", result.getData());
+        assertTrue(alipayService.queryCalled);
+        assertEquals("202406150101000001", alipayService.queryOutTradeNo);
+        assertNull(alipayService.queryTradeNo);
+    }
+
+    @Test
+    void queryWithTradeNoOnlyIsAccepted() {
+        CommonResult<String> result = alipayController.query("", "2024061522001450071408123456");
+        assertEquals(ResultCode.SUCCESS.getCode(), result.getCode());
+        assertTrue(alipayService.queryCalled);
+        assertEquals("2024061522001450071408123456", alipayService.queryTradeNo);
+    }
+
+    @Test
+    void queryWithoutAnyTradeNumberIsRejected() {
+        CommonResult<String> result = alipayController.query(null, "");
+        assertEquals(ResultCode.VALIDATE_FAILED.getCode(), result.getCode());
+        assertNull(result.getData());
+        assertFalse(alipayService.queryCalled);
+    }
+
+    @Test
+    void malformedQueryOutTradeNoIsRejected() {
+        CommonResult<String> result = alipayController.query("202406150101000001' or '1'='1", null);
+        assertEquals(ResultCode.VALIDATE_FAILED.getCode(), result.getCode());
+        assertFalse(alipayService.queryCalled);
+    }
+
+    @Test
+    void malformedQueryTradeNoIsRejected() {
+        CommonResult<String> result = alipayController.query(null, "../../../etc/passwd");
+        assertEquals(ResultCode.VALIDATE_FAILED.getCode(), result.getCode());
+        assertFalse(alipayService.queryCalled);
+    }
+
+    @Test
+    void oversizedQueryOutTradeNoIsRejected() {
+        CommonResult<String> result = alipayController.query("2".repeat(65), null);
+        assertEquals(ResultCode.VALIDATE_FAILED.getCode(), result.getCode());
+        assertFalse(alipayService.queryCalled);
     }
 }

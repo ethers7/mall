@@ -1,5 +1,6 @@
 package com.macro.mall.portal.controller;
 
+import cn.hutool.core.util.StrUtil;
 import com.macro.mall.common.api.CommonResult;
 import com.macro.mall.portal.config.AlipayConfig;
 import com.macro.mall.portal.domain.AliPayParam;
@@ -142,6 +143,31 @@ public class AlipayController {
     @RequestMapping(value = "/query", method = RequestMethod.GET)
     @ResponseBody
     public CommonResult<String> query(String outTradeNo, String tradeNo){
+        // 查询参数完全由外部提供，且商户订单号会用于订单状态变更，校验通过后才允许查询
+        try {
+            validateQueryParams(outTradeNo, tradeNo);
+        } catch (IllegalArgumentException e) {
+            log.warn("支付宝交易查询参数校验失败：{}", e.getMessage());
+            return CommonResult.validateFailed(e.getMessage());
+        }
         return CommonResult.success(alipayService.query(outTradeNo,tradeNo));
+    }
+
+    /**
+     * 校验交易查询参数：商户订单号、支付宝交易号至少传一个，且传入的参数格式必须合法，
+     * 校验不通过时抛出异常，由调用方返回参数校验失败（失败关闭）。
+     */
+    private void validateQueryParams(String outTradeNo, String tradeNo) {
+        boolean hasOutTradeNo = StrUtil.isNotEmpty(outTradeNo);
+        boolean hasTradeNo = StrUtil.isNotEmpty(tradeNo);
+        if (!hasOutTradeNo && !hasTradeNo) {
+            throw new IllegalArgumentException("商户订单号和支付宝交易号至少传一个");
+        }
+        if (hasOutTradeNo) {
+            validateTradeNo(outTradeNo);
+        }
+        if (hasTradeNo) {
+            validateTradeNo(tradeNo);
+        }
     }
 }
