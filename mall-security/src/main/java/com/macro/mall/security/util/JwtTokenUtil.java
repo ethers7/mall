@@ -2,7 +2,11 @@ package com.macro.mall.security.util;
 
 import cn.hutool.core.date.DateUtil;
 import cn.hutool.core.util.StrUtil;
+import cn.hutool.jwt.JWT;
+import cn.hutool.jwt.JWTHeader;
 import cn.hutool.jwt.JWTUtil;
+import cn.hutool.jwt.signers.JWTSigner;
+import cn.hutool.jwt.signers.JWTSignerUtil;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
@@ -22,6 +26,7 @@ import java.util.Map;
  * {"sub":"wang","created":1489079981393,"exp":1489684781}
  * signature的生成算法：
  * HMACSHA512(base64UrlEncode(header) + "." +base64UrlEncode(payload),secret)
+ * 签发和校验都固定使用HS512算法，校验时不采用token头部声明的算法
  * Created by macro on 2018/4/26.
  * Refactored to use Hutool JWTUtil
  */
@@ -29,23 +34,59 @@ public class JwtTokenUtil {
     private static final Logger LOGGER = LoggerFactory.getLogger(JwtTokenUtil.class);
     private static final String CLAIM_KEY_USERNAME = "sub";
     private static final String CLAIM_KEY_CREATED = "created";
+    /**
+     * 签发和校验token时固定使用的签名算法标识
+     * 校验时必须由服务端固定算法，绝不能采用token头部自带的alg，
+     * 否则攻击者可通过alg=none或替换为其他算法绕过签名校验（算法混淆攻击）
+     */
+    private static final String SIGN_ALGORITHM_ID = "HS512";
+    /**
+     * 签名密钥的最小长度（字节），低于该长度的密钥强度不足，直接拒绝签发和校验token
+     */
+    private static final int MIN_SECRET_LENGTH = 32;
+    /**
+     * HS512推荐的签名密钥长度（字节），即HMAC-SHA512的摘要长度（RFC 7518）
+     */
+    private static final int RECOMMENDED_SECRET_LENGTH = 64;
     @Value("${jwt.secret}")
     private String secret;
     @Value("${jwt.expiration}")
     private Long expiration;
     @Value("${jwt.tokenHead}")
     private String tokenHead;
+    /**
+     * 密钥长度不足推荐值的告警只输出一次，避免每次签发/校验token都刷日志
+     */
+    private volatile boolean weakSecretWarned;
 
     /**
      * 获取签名密钥
      * 密钥必须通过外部配置jwt.secret（如环境变量JWT_SECRET）提供，
-     * 未配置时直接抛出异常，避免使用源码中的硬编码默认密钥签发或校验token
+     * 未配置时直接抛出异常，避免使用源码中的硬编码默认密钥签发或校验token；
+     * 密钥长度不足时同样抛出异常，避免弱密钥被静默接受（HS512签名的强度取决于密钥强度）
      */
     private byte[] getSigningKey() {
         if (StrUtil.isBlank(secret)) {
             throw new IllegalStateException("JWT签名密钥未配置，请通过配置项jwt.secret（环境变量JWT_SECRET）提供随机生成的强密钥");
         }
-        return secret.getBytes(StandardCharsets.UTF_8);
+        byte[] key = secret.getBytes(StandardCharsets.UTF_8);
+        if (key.length < MIN_SECRET_LENGTH) {
+            throw new IllegalStateException("JWT签名密钥强度不足，配置项jwt.secret（环境变量JWT_SECRET）至少需要"
+                    + MIN_SECRET_LENGTH + "字节的随机字符");
+        }
+        if (key.length < RECOMMENDED_SECRET_LENGTH && !weakSecretWarned) {
+            weakSecretWarned = true;
+            LOGGER.warn("JWT签名密钥长度小于HS512的摘要长度（{}字节），建议使用不少于{}字节的随机密钥",
+                    RECOMMENDED_SECRET_LENGTH, RECOMMENDED_SECRET_LENGTH);
+        }
+        return key;
+    }
+
+    /**
+     * 获取签名器，签发和校验token时都使用服务端固定的HS512算法
+     */
+    private JWTSigner getSigner() {
+        return JWTSignerUtil.hs512(getSigningKey());
     }
 
     /**
@@ -55,7 +96,8 @@ public class JwtTokenUtil {
         // 设置过期时间
         long expireTime = System.currentTimeMillis() + expiration * 1000;
         claims.put("exp", expireTime);
-        return JWTUtil.createToken(claims, getSigningKey());
+        // 使用固定的HS512签名器签发token
+        return JWT.create().addPayloads(claims).setSigner(getSigner()).sign();
     }
 
     /**
@@ -63,15 +105,21 @@ public class JwtTokenUtil {
      */
     private Map<String, Object> getPayloadFromToken(String token) {
         try {
-            // 验证token签名
-            if (!JWTUtil.verify(token, getSigningKey())) {
-                LOGGER.info("JWT签名验证失败:{}", token);
+            JWT jwt = JWTUtil.parseToken(token);
+            // 只接受服务端签发算法（HS512）的token，拒绝alg=none及其他算法，防止算法混淆绕过签名校验
+            if (!SIGN_ALGORITHM_ID.equals(jwt.getHeader(JWTHeader.ALGORITHM))) {
+                LOGGER.info("JWT签名算法不被允许");
+                return null;
+            }
+            // 使用服务端固定算法的签名器验证token签名，不使用token头部声明的算法
+            if (!jwt.setSigner(getSigner()).verify()) {
+                LOGGER.info("JWT签名验证失败");
                 return null;
             }
             // 解析token payload
-            return JWTUtil.parseToken(token).getPayloads();
+            return jwt.getPayloads();
         } catch (Exception e) {
-            LOGGER.info("JWT格式验证失败:{}", token);
+            LOGGER.info("JWT格式验证失败");
             return null;
         }
     }
@@ -113,7 +161,8 @@ public class JwtTokenUtil {
             }
             Object exp = payload.get("exp");
             if (exp == null) {
-                return false;
+                // 缺少exp的token等同于永不过期，按失效处理（失败关闭）
+                return true;
             }
             long expTime = exp instanceof Long ? (Long) exp : ((Number) exp).longValue();
             return expTime < System.currentTimeMillis();

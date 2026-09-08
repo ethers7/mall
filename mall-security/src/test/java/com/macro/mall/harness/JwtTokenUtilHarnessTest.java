@@ -1,5 +1,10 @@
 package com.macro.mall.harness;
 
+import cn.hutool.core.codec.Base64;
+import cn.hutool.jwt.JWT;
+import cn.hutool.jwt.JWTHeader;
+import cn.hutool.jwt.JWTUtil;
+import cn.hutool.jwt.signers.JWTSignerUtil;
 import com.macro.mall.security.util.JwtTokenUtil;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -7,11 +12,15 @@ import org.springframework.security.core.userdetails.User;
 import org.springframework.security.core.userdetails.UserDetails;
 
 import java.lang.reflect.Field;
+import java.nio.charset.StandardCharsets;
 import java.util.Collections;
+import java.util.HashMap;
+import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -56,6 +65,63 @@ class JwtTokenUtilHarnessTest {
         setField("secret", "");
         assertThrows(IllegalStateException.class, () -> jwtTokenUtil.generateToken(user));
         assertFalse(jwtTokenUtil.validateToken(token, user));
+    }
+
+    @Test
+    void failClosedWhenSecretTooShort() throws Exception {
+        UserDetails user = new User("admin", "n/a", Collections.emptyList());
+        String token = jwtTokenUtil.generateToken(user);
+        //弱密钥（长度不足32字节）不能被静默接受，既不能签发也不能校验token
+        setField("secret", "short-secret");
+        assertThrows(IllegalStateException.class, () -> jwtTokenUtil.generateToken(user));
+        assertFalse(jwtTokenUtil.validateToken(token, user));
+    }
+
+    @Test
+    void issuedTokenUsesHs512() {
+        UserDetails user = new User("admin", "n/a", Collections.emptyList());
+        String token = jwtTokenUtil.generateToken(user);
+        assertEquals("HS512", JWTUtil.parseToken(token).getHeader(JWTHeader.ALGORITHM));
+    }
+
+    @Test
+    void rejectTokenWithNoneAlgorithm() {
+        UserDetails user = new User("admin", "n/a", Collections.emptyList());
+        //alg=none且签名为空的伪造token，必须被拒绝，否则任何人都能伪造登录态
+        String forged = Base64.encodeUrlSafe("{\"alg\":\"none\",\"typ\":\"JWT\"}")
+                + "." + Base64.encodeUrlSafe("{\"sub\":\"admin\",\"exp\":" + (System.currentTimeMillis() + 60000) + "}")
+                + ".";
+        assertNull(jwtTokenUtil.getUserNameFromToken(forged));
+        assertFalse(jwtTokenUtil.validateToken(forged, user));
+    }
+
+    @Test
+    void rejectTokenSignedWithOtherAlgorithm() {
+        UserDetails user = new User("admin", "n/a", Collections.emptyList());
+        //即使使用同一密钥，非HS512算法签发的token也必须被拒绝（防止算法混淆）
+        Map<String, Object> claims = new HashMap<>();
+        claims.put("sub", "admin");
+        claims.put("exp", System.currentTimeMillis() + 60000);
+        String hs256Token = JWT.create()
+                .addPayloads(claims)
+                .setSigner(JWTSignerUtil.hs256(TEST_SECRET.getBytes(StandardCharsets.UTF_8)))
+                .sign();
+        assertNull(jwtTokenUtil.getUserNameFromToken(hs256Token));
+        assertFalse(jwtTokenUtil.validateToken(hs256Token, user));
+    }
+
+    @Test
+    void rejectTokenWithoutExpiration() {
+        UserDetails user = new User("admin", "n/a", Collections.emptyList());
+        //签名正确但缺少exp的token等同于永不过期，按失效处理
+        Map<String, Object> claims = new HashMap<>();
+        claims.put("sub", "admin");
+        String noExpToken = JWT.create()
+                .addPayloads(claims)
+                .setSigner(JWTSignerUtil.hs512(TEST_SECRET.getBytes(StandardCharsets.UTF_8)))
+                .sign();
+        assertEquals("admin", jwtTokenUtil.getUserNameFromToken(noExpToken));
+        assertFalse(jwtTokenUtil.validateToken(noExpToken, user));
     }
 
     private void setField(String name, Object value) throws Exception {
