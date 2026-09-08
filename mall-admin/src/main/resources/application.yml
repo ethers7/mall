@@ -49,7 +49,7 @@ secure:
       - /minio/upload
       - /aliyun/oss/policy
   cors:
-    allowed-origins: [] #跨域访问来源白名单，为空时认证/鉴权失败的响应不返回跨域响应头，不支持通配符
+    allowed-origins: [] #跨域访问来源白名单，为空时认证/鉴权失败的响应不返回跨域响应头，不支持通配符；仅接受scheme://host[:port]格式，其他格式（含换行等控制字符）在启动时被丢弃
 
 springdoc:
   swagger-ui:

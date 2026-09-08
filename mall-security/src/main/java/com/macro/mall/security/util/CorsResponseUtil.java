@@ -24,7 +24,9 @@ public final class CorsResponseUtil {
             return;
         }
         String allowedOrigin = corsAllowedOriginsConfig.resolveAllowedOrigin(request.getHeader("Origin"));
-        if (allowedOrigin == null) {
+        //写入前再次严格校验来源格式，含CR、LF等控制字符时不写入任何跨域响应头，
+        //彻底避免响应头拆分（CWE-113）
+        if (!CorsAllowedOriginsConfig.isValidOrigin(allowedOrigin)) {
             return;
         }
         response.setHeader("Access-Control-Allow-Origin", allowedOrigin);
