@@ -23,8 +23,9 @@ import java.util.Map;
  * JWT token的格式：header.payload.signature
  * header的格式（算法、token的类型）：
  * {"alg": "HS512","typ": "JWT"}
- * payload的格式（用户名、创建时间、生成时间）：
- * {"sub":"wang","created":1489079981393,"exp":1489684781}
+ * payload的格式（用户名、签发时间、过期时间）：
+ * {"sub":"wang","iat":1489079981,"exp":1489684781393}
+ * 其中iat为JWT标准（RFC 7519）要求的秒级时间戳，exp沿用本项目原有的毫秒级时间戳
  * signature的生成算法：
  * HMACSHA512(base64UrlEncode(header) + "." +base64UrlEncode(payload),secret)
  * 签发和校验都固定使用HS512算法，校验时不采用token头部声明的算法
@@ -39,15 +40,11 @@ public class JwtTokenUtil {
      */
     private static final String CLAIM_KEY_USERNAME = RegisteredPayload.SUBJECT;
     /**
-     * token创建时间为本项目自定义的声明，JWT标准中无对应的已注册声明名
+     * token签发时间使用JWT标准中已注册的iat（Issued At，RFC 7519 4.1.6）声明，
+     * 直接引用Hutool中的常量，避免手写协议字段名出现拼写错误；
+     * Hutool按标准要求把日期类型的声明写为秒级时间戳（NumericDate）
      */
-    private static final String CLAIM_KEY_CREATED = "created";
-    /**
-     * 签发和校验token时固定使用的签名算法标识
-     * 校验时必须由服务端固定算法，绝不能采用token头部自带的alg，
-     * 否则攻击者可通过alg=none或替换为其他算法绕过签名校验（算法混淆攻击）
-     */
-    private static final String SIGN_ALGORITHM_ID = "HS512";
+    private static final String CLAIM_KEY_ISSUED_AT = RegisteredPayload.ISSUED_AT;
     /**
      * 签名密钥的最小长度（字节），低于该长度的密钥强度不足，直接拒绝签发和校验token
      */
@@ -113,14 +110,18 @@ public class JwtTokenUtil {
      */
     private Map<String, Object> getPayloadFromToken(String token) {
         try {
+            // 服务端固定的HS512签名器，校验算法和校验签名都以它为准，绝不采用token头部声明的算法
+            JWTSigner signer = getSigner();
             JWT jwt = JWTUtil.parseToken(token);
-            // 只接受服务端签发算法（HS512）的token，拒绝alg=none及其他算法，防止算法混淆绕过签名校验
-            if (!SIGN_ALGORITHM_ID.equals(jwt.getHeader(JWTHeader.ALGORITHM))) {
+            // 只接受服务端签发算法（HS512）的token，拒绝alg=none及其他算法，防止算法混淆绕过签名校验；
+            // 算法标识由签名器自身派生（JWTSigner#getAlgorithmId），与Hutool签发token时写入alg头部的
+            // 取值（AlgorithmUtil#getId(signer.getAlgorithm())）来自同一映射，不会出现手写标识与库行为不一致
+            if (!signer.getAlgorithmId().equals(jwt.getHeader(JWTHeader.ALGORITHM))) {
                 LOGGER.info("JWT签名算法不被允许");
                 return null;
             }
             // 使用服务端固定算法的签名器验证token签名，不使用token头部声明的算法
-            if (!jwt.setSigner(getSigner()).verify()) {
+            if (!jwt.setSigner(signer).verify()) {
                 LOGGER.info("JWT签名验证失败");
                 return null;
             }
@@ -202,7 +203,7 @@ public class JwtTokenUtil {
     public String generateToken(UserDetails userDetails) {
         Map<String, Object> claims = new HashMap<>();
         claims.put(CLAIM_KEY_USERNAME, userDetails.getUsername());
-        claims.put(CLAIM_KEY_CREATED, new Date());
+        claims.put(CLAIM_KEY_ISSUED_AT, new Date());
         return generateToken(claims);
     }
 
@@ -232,7 +233,7 @@ public class JwtTokenUtil {
         if (tokenRefreshJustBefore(token, 30 * 60)) {
             return token;
         } else {
-            payload.put(CLAIM_KEY_CREATED, new Date());
+            payload.put(CLAIM_KEY_ISSUED_AT, new Date());
             return generateToken(payload);
         }
     }
@@ -248,18 +249,28 @@ public class JwtTokenUtil {
         if (payload == null) {
             return false;
         }
-        Object created = payload.get(CLAIM_KEY_CREATED);
-        Date createdDate = null;
-        if (created instanceof Long) {
-            createdDate = new Date((Long) created);
-        } else if (created instanceof Date) {
-            createdDate = (Date) created;
-        }
-        if (createdDate == null) {
+        Date issuedAtDate = getIssuedAtFromPayload(payload);
+        if (issuedAtDate == null) {
             return false;
         }
         Date refreshDate = new Date();
-        // 刷新时间在创建时间的指定时间内
-        return refreshDate.after(createdDate) && refreshDate.before(DateUtil.offsetSecond(createdDate, time));
+        // 刷新时间在签发时间的指定时间内
+        return refreshDate.after(issuedAtDate) && refreshDate.before(DateUtil.offsetSecond(issuedAtDate, time));
+    }
+
+    /**
+     * 从payload中获取token的签发时间
+     * iat为JWT标准定义的秒级时间戳（NumericDate），解析JSON后可能是Integer或Long，统一按Number处理；
+     * payload尚未序列化时该声明仍是Date，因此同时兼容Date
+     */
+    private static Date getIssuedAtFromPayload(Map<String, Object> payload) {
+        Object issuedAt = payload.get(CLAIM_KEY_ISSUED_AT);
+        if (issuedAt instanceof Date) {
+            return (Date) issuedAt;
+        }
+        if (issuedAt instanceof Number) {
+            return new Date(((Number) issuedAt).longValue() * 1000L);
+        }
+        return null;
     }
 }
