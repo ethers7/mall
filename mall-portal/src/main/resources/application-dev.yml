@@ -45,8 +45,10 @@ logstash:
 alipay:
   gatewayUrl: https://openapi-sandbox.dl.alipaydev.com/gateway.do
   appId: your appId
-  alipayPublicKey: your alipayPublicKey
-  appPrivateKey: your appPrivateKey
+  #支付宝公钥、应用私钥属于密钥材料，不在源码/配置中提供默认值，
+  #需由部署环境通过环境变量（或密钥管理系统）注入，未注入时为空，支付回调验签直接拒绝
+  alipayPublicKey: ${ALIPAY_PUBLIC_KEY:}
+  appPrivateKey: ${ALIPAY_APP_PRIVATE_KEY:}
   returnUrl: http://localhost:8060/#/pages/money/paySuccess
   notifyUrl:
 

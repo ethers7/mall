@@ -32,13 +32,18 @@ public class CommonSecurityConfig {
     }
 
     @Bean
-    public RestfulAccessDeniedHandler restfulAccessDeniedHandler() {
-        return new RestfulAccessDeniedHandler();
+    public CorsAllowedOriginsConfig corsAllowedOriginsConfig() {
+        return new CorsAllowedOriginsConfig();
     }
 
     @Bean
-    public RestAuthenticationEntryPoint restAuthenticationEntryPoint() {
-        return new RestAuthenticationEntryPoint();
+    public RestfulAccessDeniedHandler restfulAccessDeniedHandler(CorsAllowedOriginsConfig corsAllowedOriginsConfig) {
+        return new RestfulAccessDeniedHandler(corsAllowedOriginsConfig);
+    }
+
+    @Bean
+    public RestAuthenticationEntryPoint restAuthenticationEntryPoint(CorsAllowedOriginsConfig corsAllowedOriginsConfig) {
+        return new RestAuthenticationEntryPoint(corsAllowedOriginsConfig);
     }
 
     @Bean

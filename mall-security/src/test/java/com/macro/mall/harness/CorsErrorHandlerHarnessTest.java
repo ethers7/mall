@@ -1,0 +1,300 @@
+package com.macro.mall.harness;
+
+import com.macro.mall.security.component.RestAuthenticationEntryPoint;
+import com.macro.mall.security.component.RestfulAccessDeniedHandler;
+import com.macro.mall.security.config.CorsAllowedOriginsConfig;
+import com.macro.mall.security.util.CorsResponseUtil;
+import org.junit.jupiter.api.Test;
+import org.springframework.mock.web.MockHttpServletRequest;
+import org.springframework.mock.web.MockHttpServletResponse;
+import org.springframework.security.access.AccessDeniedException;
+import org.springframework.security.authentication.InsufficientAuthenticationException;
+
+import java.util.Collections;
+import java.util.List;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotSame;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+
+/**
+ * SpringSecurity错误响应的跨域策略（CWE-942）：仅白名单来源可读取响应，
+ * 且写入Access-Control-Allow-Origin的值只能是配置对象持有的字符串实例，
+ * 请求头中的Origin只参与判定，不存在通往响应头的数据流。
+ * 同时覆盖跨域响应头的CRLF注入防护（CWE-113）：非法配置来源不会被写入响应头。
+ */
+class CorsErrorHandlerHarnessTest {
+
+    private static final String ORIGIN_HEADER = "Origin";
+    private static final String ALLOW_ORIGIN_HEADER = "Access-Control-Allow-Origin";
+    private static final String ALLOW_CREDENTIALS_HEADER = "Access-Control-Allow-Credentials";
+    private static final String VARY_HEADER = "Vary";
+    private static final String TRUSTED_ORIGIN = "https://trusted.internal";
+    private static final String CRLF_ORIGIN = "https://evil.example\r\nX-Injected: 1";
+
+    private CorsAllowedOriginsConfig configWith(List<String> origins) {
+        CorsAllowedOriginsConfig config = new CorsAllowedOriginsConfig();
+        config.setAllowedOrigins(origins);
+        return config;
+    }
+
+    private MockHttpServletRequest requestFrom(String origin) {
+        MockHttpServletRequest request = new MockHttpServletRequest();
+        if (origin != null) {
+            request.addHeader(ORIGIN_HEADER, origin);
+        }
+        return request;
+    }
+
+    /**
+     * 每次返回内容相同但引用不同的字符串，用于证明响应头中的值不是请求提供的那个对象
+     */
+    private String freshString(String value) {
+        return new StringBuilder(value).toString();
+    }
+
+    private MockHttpServletResponse applyFor(CorsAllowedOriginsConfig config, MockHttpServletRequest request) {
+        MockHttpServletResponse response = new MockHttpServletResponse();
+        CorsResponseUtil.applyAllowedOrigin(request, response, config);
+        return response;
+    }
+
+    @Test
+    void accessDeniedHandlerOmitsCorsHeaderForUntrustedOrigin() throws Exception {
+        MockHttpServletResponse response = new MockHttpServletResponse();
+        new RestfulAccessDeniedHandler(configWith(Collections.singletonList(TRUSTED_ORIGIN)))
+                .handle(requestFrom("https://evil.example"), response, new AccessDeniedException("denied"));
+        assertNull(response.getHeader(ALLOW_ORIGIN_HEADER));
+        assertNull(response.getHeader(ALLOW_CREDENTIALS_HEADER));
+        //白名单已配置时响应随Origin变化，未命中也要声明Vary，避免缓存把响应串给其他来源
+        assertEquals(ORIGIN_HEADER, response.getHeader(VARY_HEADER));
+        assertTrue(response.getContentAsString().contains("403"));
+        assertTrue(response.getContentType().startsWith("application/json"));
+    }
+
+    @Test
+    void accessDeniedHandlerReturnsConfiguredOriginOnly() throws Exception {
+        CorsAllowedOriginsConfig config = configWith(Collections.singletonList(freshString(TRUSTED_ORIGIN)));
+        MockHttpServletResponse response = new MockHttpServletResponse();
+        new RestfulAccessDeniedHandler(config)
+                .handle(requestFrom(freshString(TRUSTED_ORIGIN)), response, new AccessDeniedException("denied"));
+        assertEquals(TRUSTED_ORIGIN, response.getHeader(ALLOW_ORIGIN_HEADER));
+        assertEquals(ORIGIN_HEADER, response.getHeader(VARY_HEADER));
+        assertTrue(response.getContentAsString().contains("403"));
+    }
+
+    @Test
+    void emittedOriginIsTheConfiguredInstanceAndNotTheRequestSuppliedString() {
+        String configuredInstance = freshString(TRUSTED_ORIGIN);
+        String requestInstance = freshString(TRUSTED_ORIGIN);
+        CorsAllowedOriginsConfig config = configWith(Collections.singletonList(configuredInstance));
+        MockHttpServletResponse response = applyFor(config, requestFrom(requestInstance));
+
+        String emitted = response.getHeader(ALLOW_ORIGIN_HEADER);
+        //写入响应头的必须是白名单集合中的那个字符串对象，而不是请求提供的对象
+        assertSame(config.getAllowedOrigins().get(0), emitted);
+        assertNotSame(requestInstance, emitted);
+    }
+
+    @Test
+    void allowCredentialsIsNotEmittedForErrorResponses() {
+        MockHttpServletResponse response = applyFor(configWith(Collections.singletonList(TRUSTED_ORIGIN)),
+                requestFrom(TRUSTED_ORIGIN));
+        assertEquals(TRUSTED_ORIGIN, response.getHeader(ALLOW_ORIGIN_HEADER));
+        //认证走无状态的Authorization请求头（无Cookie/会话），错误体无需凭据模式即可被读取
+        assertNull(response.getHeader(ALLOW_CREDENTIALS_HEADER));
+    }
+
+    @Test
+    void authenticationEntryPointEmitsNoCorsHeaderWhenAllowlistEmpty() throws Exception {
+        MockHttpServletResponse response = new MockHttpServletResponse();
+        new RestAuthenticationEntryPoint(configWith(Collections.emptyList()))
+                .commence(requestFrom(TRUSTED_ORIGIN), response,
+                        new InsufficientAuthenticationException("unauthorized"));
+        //默认配置为空：完全不返回跨域响应头，连Vary都不需要（fail closed）
+        assertNull(response.getHeader(ALLOW_ORIGIN_HEADER));
+        assertNull(response.getHeader(ALLOW_CREDENTIALS_HEADER));
+        assertNull(response.getHeader(VARY_HEADER));
+        assertTrue(response.getContentAsString().contains("401"));
+    }
+
+    @Test
+    void authenticationEntryPointNeverReturnsWildcardOrigin() throws Exception {
+        MockHttpServletResponse response = new MockHttpServletResponse();
+        new RestAuthenticationEntryPoint(configWith(Collections.singletonList("*")))
+                .commence(requestFrom("https://evil.example"), response,
+                        new InsufficientAuthenticationException("unauthorized"));
+        assertNull(response.getHeader(ALLOW_ORIGIN_HEADER));
+        assertNull(response.getHeader(VARY_HEADER));
+    }
+
+    @Test
+    void missingOrBlankOriginHeaderProducesNoAllowOriginHeader() {
+        CorsAllowedOriginsConfig config = configWith(Collections.singletonList(TRUSTED_ORIGIN));
+        assertNull(applyFor(config, requestFrom(null)).getHeader(ALLOW_ORIGIN_HEADER));
+        assertNull(applyFor(config, requestFrom("")).getHeader(ALLOW_ORIGIN_HEADER));
+        assertNull(applyFor(config, requestFrom("   ")).getHeader(ALLOW_ORIGIN_HEADER));
+    }
+
+    @Test
+    void duplicatedOrMultiValuedOriginHeaderProducesNoAllowOriginHeader() {
+        CorsAllowedOriginsConfig config = configWith(Collections.singletonList(TRUSTED_ORIGIN));
+
+        MockHttpServletRequest duplicated = requestFrom(TRUSTED_ORIGIN);
+        duplicated.addHeader(ORIGIN_HEADER, "https://evil.example");
+        MockHttpServletResponse duplicatedResponse = applyFor(config, duplicated);
+        assertNull(duplicatedResponse.getHeader(ALLOW_ORIGIN_HEADER));
+        assertEquals(ORIGIN_HEADER, duplicatedResponse.getHeader(VARY_HEADER));
+
+        MockHttpServletRequest reversed = requestFrom("https://evil.example");
+        reversed.addHeader(ORIGIN_HEADER, TRUSTED_ORIGIN);
+        assertNull(applyFor(config, reversed).getHeader(ALLOW_ORIGIN_HEADER));
+
+        //单个请求头中携带多个来源（逗号拼接）同样不能命中
+        assertNull(applyFor(config, requestFrom(TRUSTED_ORIGIN + ", https://evil.example"))
+                .getHeader(ALLOW_ORIGIN_HEADER));
+    }
+
+    @Test
+    void originDifferingOnlyByCasePortSlashOrUserInfoProducesNoAllowOriginHeader() {
+        CorsAllowedOriginsConfig config = configWith(Collections.singletonList(TRUSTED_ORIGIN));
+        for (String requestOrigin : List.of(
+                "https://TRUSTED.internal",
+                "HTTPS://trusted.internal",
+                TRUSTED_ORIGIN + ":8443",
+                TRUSTED_ORIGIN + "/",
+                "https://user@trusted.internal",
+                "https://user:pass@trusted.internal",
+                "http://trusted.internal",
+                TRUSTED_ORIGIN + ".evil.example",
+                TRUSTED_ORIGIN + " ")) {
+            MockHttpServletResponse response = applyFor(config, requestFrom(requestOrigin));
+            assertNull(response.getHeader(ALLOW_ORIGIN_HEADER), "must not allow " + requestOrigin);
+            assertNull(response.getHeader(ALLOW_CREDENTIALS_HEADER));
+        }
+    }
+
+    @Test
+    void configurationLoadNormalizesAndRejectsInvalidOrigins() {
+        CorsAllowedOriginsConfig config = configWith(List.of(
+                CRLF_ORIGIN,
+                "https://evil.example\nSet-Cookie: a=b",
+                "https://evil.example/path",
+                "javascript://evil.example",
+                "*",
+                "  HTTPS://TRUSTED.internal:8443  ",
+                "https://trusted.internal:8443"));
+        //只有格式合法的来源被保留（首尾空白归一化、scheme与host转小写、去重），其余在加载阶段被丢弃（fail closed）
+        assertEquals(List.of("https://trusted.internal:8443"), config.getAllowedOrigins());
+        //归一化后的配置项可以匹配浏览器发送的小写Origin
+        assertEquals("https://trusted.internal:8443",
+                applyFor(config, requestFrom("https://trusted.internal:8443")).getHeader(ALLOW_ORIGIN_HEADER));
+        assertNull(applyFor(config, requestFrom(CRLF_ORIGIN)).getHeader(ALLOW_ORIGIN_HEADER));
+        assertNull(applyFor(config, requestFrom("https://evil.example/path")).getHeader(ALLOW_ORIGIN_HEADER));
+    }
+
+    @Test
+    void allowedOriginsCollectionIsImmutable() {
+        CorsAllowedOriginsConfig config = configWith(Collections.singletonList(TRUSTED_ORIGIN));
+        //白名单在启动时固化，运行期无法被追加或清空
+        assertThrows(UnsupportedOperationException.class,
+                () -> config.getAllowedOrigins().add("https://evil.example"));
+        assertThrows(UnsupportedOperationException.class, () -> config.getAllowedOrigins().clear());
+    }
+
+    @Test
+    void matchesAllowedOriginOnlyAcceptsEntriesFromTheAllowlist() {
+        CorsAllowedOriginsConfig config = configWith(Collections.singletonList(TRUSTED_ORIGIN));
+        assertTrue(config.matchesAllowedOrigin(TRUSTED_ORIGIN, TRUSTED_ORIGIN));
+        //调用方自造的来源即使与请求相等也不能通过判定
+        assertFalse(config.matchesAllowedOrigin("https://evil.example", "https://evil.example"));
+        assertFalse(config.matchesAllowedOrigin(TRUSTED_ORIGIN, null));
+        assertFalse(config.matchesAllowedOrigin(TRUSTED_ORIGIN, ""));
+        assertFalse(config.matchesAllowedOrigin(null, TRUSTED_ORIGIN));
+        assertFalse(configWith(Collections.emptyList()).hasAllowedOrigins());
+        assertTrue(config.hasAllowedOrigins());
+    }
+
+    @Test
+    void isValidOriginRejectsControlCharactersAndWildcard() {
+        assertFalse(CorsAllowedOriginsConfig.isValidOrigin(null));
+        assertFalse(CorsAllowedOriginsConfig.isValidOrigin("*"));
+        assertFalse(CorsAllowedOriginsConfig.isValidOrigin(CRLF_ORIGIN));
+        assertFalse(CorsAllowedOriginsConfig.isValidOrigin(TRUSTED_ORIGIN + "\r"));
+        assertFalse(CorsAllowedOriginsConfig.isValidOrigin(TRUSTED_ORIGIN + "\n"));
+        assertFalse(CorsAllowedOriginsConfig.isValidOrigin(TRUSTED_ORIGIN + " "));
+        assertFalse(CorsAllowedOriginsConfig.isValidOrigin(TRUSTED_ORIGIN + "/"));
+        assertFalse(CorsAllowedOriginsConfig.isValidOrigin("https://user@trusted.internal"));
+        assertFalse(CorsAllowedOriginsConfig.isValidOrigin("https://trusted internal"));
+        assertTrue(CorsAllowedOriginsConfig.isValidOrigin("http://localhost:8080"));
+        assertTrue(CorsAllowedOriginsConfig.isValidOrigin(TRUSTED_ORIGIN));
+    }
+
+    @Test
+    void errorHandlersNeverEmitCorsHeaderForOriginWithCrlf() throws Exception {
+        MockHttpServletResponse deniedResponse = new MockHttpServletResponse();
+        new RestfulAccessDeniedHandler(configWith(Collections.singletonList(CRLF_ORIGIN)))
+                .handle(requestFrom(CRLF_ORIGIN), deniedResponse, new AccessDeniedException("denied"));
+        assertNull(deniedResponse.getHeader(ALLOW_ORIGIN_HEADER));
+        //含CRLF的配置在加载阶段即被丢弃，白名单为空，连Vary都不写
+        assertNull(deniedResponse.getHeader(VARY_HEADER));
+        //错误响应体与状态码保持不变
+        assertTrue(deniedResponse.getContentAsString().contains("403"));
+
+        MockHttpServletResponse entryPointResponse = new MockHttpServletResponse();
+        new RestAuthenticationEntryPoint(configWith(Collections.singletonList(CRLF_ORIGIN)))
+                .commence(requestFrom(CRLF_ORIGIN), entryPointResponse,
+                        new InsufficientAuthenticationException("unauthorized"));
+        assertNull(entryPointResponse.getHeader(ALLOW_ORIGIN_HEADER));
+        assertTrue(entryPointResponse.getContentAsString().contains("401"));
+    }
+
+    @Test
+    void applyAllowedOriginRejectsInvalidOriginAtEmitSite() {
+        //即使白名单校验被绕过（例如自定义实现返回非法值），写入前的兜底校验仍拦截CRLF
+        CorsAllowedOriginsConfig bypassedConfig = new CorsAllowedOriginsConfig() {
+            @Override
+            public boolean hasAllowedOrigins() {
+                return true;
+            }
+
+            @Override
+            public List<String> getAllowedOrigins() {
+                return List.of(CRLF_ORIGIN);
+            }
+
+            @Override
+            public boolean matchesAllowedOrigin(String configuredOrigin, String requestOrigin) {
+                return true;
+            }
+        };
+        MockHttpServletResponse response = applyFor(bypassedConfig, requestFrom("https://evil.example"));
+        assertNull(response.getHeader(ALLOW_ORIGIN_HEADER));
+        assertNull(response.getHeader(ALLOW_CREDENTIALS_HEADER));
+        assertFalse(response.getHeaderNames().stream()
+                .anyMatch(name -> name.contains("\r") || name.contains("\n") || "X-Injected".equals(name)));
+    }
+
+    @Test
+    void varyOriginIsNotDuplicatedWhenAlreadyPresent() {
+        MockHttpServletResponse response = new MockHttpServletResponse();
+        response.addHeader(VARY_HEADER, "Origin, Access-Control-Request-Method");
+        CorsResponseUtil.applyAllowedOrigin(requestFrom(TRUSTED_ORIGIN), response,
+                configWith(Collections.singletonList(TRUSTED_ORIGIN)));
+        assertEquals(TRUSTED_ORIGIN, response.getHeader(ALLOW_ORIGIN_HEADER));
+        assertEquals(1, response.getHeaders(VARY_HEADER).size());
+    }
+
+    @Test
+    void nullConfigOrRequestIsHandledWithoutHeaders() {
+        MockHttpServletResponse response = new MockHttpServletResponse();
+        CorsResponseUtil.applyAllowedOrigin(requestFrom(TRUSTED_ORIGIN), response, null);
+        assertTrue(response.getHeaderNames().isEmpty());
+        CorsResponseUtil.applyAllowedOrigin(null, response, configWith(Collections.singletonList(TRUSTED_ORIGIN)));
+        assertTrue(response.getHeaderNames().isEmpty());
+    }
+}

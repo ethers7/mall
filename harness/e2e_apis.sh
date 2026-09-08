@@ -6,8 +6,58 @@ set -eu
 BASE="${BASE_URL:-http://127.0.0.1:8080}"
 BASE="${BASE%/}"
 ADMIN_USER="${MALL_ADMIN_USER:-admin}"
-ADMIN_PASS="${MALL_ADMIN_PASS:-macro123}"
+# No default password: document/sql/mall.sql ships no password hashes, so the
+# admin credential is supplied at runtime (env) and applied either by this script
+# (mysql path) or by mall-admin's startup bootstrap — see the guard below.
+ADMIN_PASS="${MALL_ADMIN_PASS:-}"
 OUTDIR="${E2E_JUNIT_DIR:-test-results}"
+REPO_ROOT=$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)
+SEED_SCRIPT="${REPO_ROOT}/document/sh/seed-credentials.sh"
+
+gen_password() {
+  if command -v openssl >/dev/null 2>&1; then
+    openssl rand -hex 18
+  else
+    od -An -tx1 -N18 /dev/urandom | tr -d ' \n'
+  fi
+}
+
+can_seed() {
+  [ -n "${MALL_DB_PASSWORD:-}" ] &&
+    [ -f "$SEED_SCRIPT" ] &&
+    command -v bash >/dev/null 2>&1 &&
+    command -v mysql >/dev/null 2>&1
+}
+
+# The seeded accounts are locked ('!LOCKED' placeholder) until a password is
+# applied at runtime. Two runtime paths exist, in this order:
+#   1. mysql path (can_seed): MALL_DB_PASSWORD + mysql client available, so this
+#      script can apply the password itself via document/sh/seed-credentials.sh.
+#      Only this path can invent an ephemeral password, because it also writes it.
+#   2. application path: when MALL_ADMIN_PASS is exported, mall-admin's
+#      AdminPasswordBootstrapRunner applies it to the still-locked account at
+#      startup (BCrypt, same encoder as the login path). Nothing to do here — the
+#      app must have been started with the same MALL_ADMIN_PASS/MALL_ADMIN_USER,
+#      and the login checks below stay real assertions: if the bootstrap did not
+#      run, login fails and this gate fails.
+# Never fall back to a committed value, and never skip the login assertions.
+if can_seed; then
+  if [ -z "$ADMIN_PASS" ]; then
+    ADMIN_PASS=$(gen_password)
+    echo "==> MALL_ADMIN_PASS unset: using an ephemeral password for ${ADMIN_USER}"
+  fi
+  echo "==> seeding ${ADMIN_USER} credential via document/sh/seed-credentials.sh"
+  MALL_ADMIN_USER="$ADMIN_USER" MALL_ADMIN_PASS="$ADMIN_PASS" bash "$SEED_SCRIPT"
+elif [ -n "$ADMIN_PASS" ]; then
+  echo "==> mysql seeding path unavailable: relying on mall-admin startup bootstrap for ${ADMIN_USER}"
+else
+  echo "MALL_ADMIN_PASS is required: document/sql/mall.sql contains no password hashes," >&2
+  echo "so accounts are locked until a password is applied at runtime. Either export" >&2
+  echo "MALL_ADMIN_PASS (mall-admin initialises the locked account with it on startup," >&2
+  echo "and it is also used to log in here), or provide MALL_DB_PASSWORD plus the mysql" >&2
+  echo "client so this script can run document/sh/seed-credentials.sh itself." >&2
+  exit 2
+fi
 mkdir -p "$OUTDIR"
 OUT="$OUTDIR/functional-junit.xml"
 BODY="/tmp/mall-e2e-body"

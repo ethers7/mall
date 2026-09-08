@@ -4,6 +4,7 @@ import com.macro.mall.portal.util.DateUtil;
 import org.junit.jupiter.api.Test;
 
 import java.util.Calendar;
+import java.util.Date;
 import java.util.GregorianCalendar;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
