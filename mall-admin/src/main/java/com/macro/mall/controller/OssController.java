@@ -2,6 +2,7 @@ package com.macro.mall.controller;
 
 
 import com.macro.mall.common.api.CommonResult;
+import com.macro.mall.dto.OssCallbackRequest;
 import com.macro.mall.dto.OssCallbackResult;
 import com.macro.mall.dto.OssPolicyResult;
 import com.macro.mall.service.OssService;
@@ -9,11 +10,10 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Controller;
+import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestMethod;
 import org.springframework.web.bind.annotation.ResponseBody;
-
-import jakarta.servlet.http.HttpServletRequest;
 
 /**
  * Oss对象存储管理Controller
@@ -37,8 +37,9 @@ public class OssController {
     @Operation(summary = "Oss上传成功回调")
     @RequestMapping(value = "callback", method = RequestMethod.POST)
     @ResponseBody
-    public CommonResult<OssCallbackResult> callback(HttpServletRequest request) {
-        OssCallbackResult ossCallbackResult = ossService.callback(request);
+    public CommonResult<OssCallbackResult> callback(@Validated OssCallbackRequest callbackRequest) {
+        // 回调参数由Spring在此绑定并完成白名单校验，校验不通过时由全局异常处理返回参数校验失败
+        OssCallbackResult ossCallbackResult = ossService.callback(callbackRequest);
         return CommonResult.success(ossCallbackResult);
     }
 

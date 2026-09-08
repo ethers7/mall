@@ -8,6 +8,7 @@ import com.aliyun.oss.model.MatchMode;
 import com.aliyun.oss.model.PolicyConditions;
 import com.macro.mall.common.exception.Asserts;
 import com.macro.mall.dto.OssCallbackParam;
+import com.macro.mall.dto.OssCallbackRequest;
 import com.macro.mall.dto.OssCallbackResult;
 import com.macro.mall.dto.OssPolicyResult;
 import com.macro.mall.service.OssService;
@@ -17,7 +18,6 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
-import jakarta.servlet.http.HttpServletRequest;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.Locale;
@@ -33,13 +33,13 @@ public class OssServiceImpl implements OssService {
 
 	private static final Logger LOGGER = LoggerFactory.getLogger(OssServiceImpl.class);
 	/**
-	 * 上传回调中对象名（文件名）的最大长度
+	 * 上传回调中对象名（文件名）的最大长度，与绑定层的校验规则保持一致
 	 */
-	private static final int MAX_FILENAME_LENGTH = 255;
+	private static final int MAX_FILENAME_LENGTH = OssCallbackRequest.MAX_FILENAME_LENGTH;
 	/**
 	 * 对象名白名单：只允许字母、数字、下划线、中划线、点号和目录分隔符，且必须以字母或数字开头
 	 */
-	private static final Pattern FILENAME_PATTERN = Pattern.compile("[A-Za-z0-9][A-Za-z0-9._/-]*");
+	private static final Pattern FILENAME_PATTERN = Pattern.compile(OssCallbackRequest.FILENAME_REGEX);
 	/**
 	 * 允许上传的文件扩展名白名单
 	 */
@@ -48,11 +48,11 @@ public class OssServiceImpl implements OssService {
 	/**
 	 * 数字类型回调参数白名单（文件大小、图片宽高）
 	 */
-	private static final Pattern NUMERIC_PATTERN = Pattern.compile("[0-9]{1,19}");
+	private static final Pattern NUMERIC_PATTERN = Pattern.compile(OssCallbackRequest.NUMERIC_REGEX);
 	/**
 	 * mimeType白名单，形如image/jpeg
 	 */
-	private static final Pattern MIME_TYPE_PATTERN = Pattern.compile("[A-Za-z0-9][A-Za-z0-9!#$&^_.+-]{0,63}/[A-Za-z0-9][A-Za-z0-9!#$&^_.+-]{0,63}");
+	private static final Pattern MIME_TYPE_PATTERN = Pattern.compile(OssCallbackRequest.MIME_TYPE_REGEX);
 
 	@Value("${aliyun.oss.policy.expire}")
 	private int ALIYUN_OSS_EXPIRE;
@@ -114,16 +114,19 @@ public class OssServiceImpl implements OssService {
 	}
 
 	@Override
-	public OssCallbackResult callback(HttpServletRequest request) {
+	public OssCallbackResult callback(OssCallbackRequest callbackRequest) {
+		// 回调参数已由Controller边界绑定并校验，此处再做一次失败关闭的校验后才允许使用
+		if (callbackRequest == null) {
+			Asserts.fail("上传回调参数不能为空");
+		}
 		OssCallbackResult result= new OssCallbackResult();
-		// 回调参数来自外部请求，先校验再使用
-		String filename = validateFilename(request.getParameter("filename"));
+		String filename = validateFilename(callbackRequest.getFilename());
 		filename = "http://".concat(ALIYUN_OSS_BUCKET_NAME).concat(".").concat(ALIYUN_OSS_ENDPOINT).concat("/").concat(filename);
 		result.setFilename(filename);
-		result.setSize(validateNumeric(request.getParameter("size"), "文件大小"));
-		result.setMimeType(validateMimeType(request.getParameter("mimeType")));
-		result.setWidth(validateNumeric(request.getParameter("width"), "图片宽度"));
-		result.setHeight(validateNumeric(request.getParameter("height"), "图片高度"));
+		result.setSize(validateNumeric(callbackRequest.getSize(), "文件大小"));
+		result.setMimeType(validateMimeType(callbackRequest.getMimeType()));
+		result.setWidth(validateNumeric(callbackRequest.getWidth(), "图片宽度"));
+		result.setHeight(validateNumeric(callbackRequest.getHeight(), "图片高度"));
 		return result;
 	}
 
