@@ -1,5 +1,6 @@
 package com.macro.mall.portal.service.impl;
 
+import cn.hutool.core.collection.CollUtil;
 import cn.hutool.core.util.StrUtil;
 import com.alibaba.fastjson.JSONObject;
 import com.alipay.api.AlipayApiException;
@@ -10,6 +11,8 @@ import com.alipay.api.request.AlipayTradeQueryRequest;
 import com.alipay.api.request.AlipayTradeWapPayRequest;
 import com.alipay.api.response.AlipayTradeQueryResponse;
 import com.macro.mall.mapper.OmsOrderMapper;
+import com.macro.mall.model.OmsOrder;
+import com.macro.mall.model.OmsOrderExample;
 import com.macro.mall.portal.config.AlipayConfig;
 import com.macro.mall.portal.domain.AliPayParam;
 import com.macro.mall.portal.service.AlipayService;
@@ -18,6 +21,8 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
+import java.math.BigDecimal;
+import java.util.List;
 import java.util.Map;
 
 /**
@@ -29,6 +34,20 @@ import java.util.Map;
 @Slf4j
 @Service
 public class AlipayServiceImpl implements AlipayService {
+
+    /**
+     * 异步回调处理成功时返回给支付宝的结果
+     */
+    private static final String NOTIFY_SUCCESS = "success";
+    /**
+     * 异步回调处理失败时返回给支付宝的结果
+     */
+    private static final String NOTIFY_FAILURE = "failure";
+    /**
+     * 支付宝公钥未配置时配置文件中的占位值
+     */
+    private static final String ALIPAY_PUBLIC_KEY_PLACEHOLDER = "your alipayPublicKey";
+
     @Autowired
     private AlipayConfig alipayConfig;
     @Autowired
@@ -70,29 +89,94 @@ public class AlipayServiceImpl implements AlipayService {
 
     @Override
     public String notify(Map<String, String> params) {
-        String result = "failure";
-        boolean signVerified = false;
+        //支付宝公钥是认证异步回调来源的唯一凭据，未配置或仍为占位值时无法完成验签，
+        //此处直接失败关闭，避免验签始终异常却被忽略、订单被伪造的回调置为已支付
+        String alipayPublicKey = StrUtil.trim(alipayConfig.getAlipayPublicKey());
+        if (StrUtil.isEmpty(alipayPublicKey) || ALIPAY_PUBLIC_KEY_PLACEHOLDER.equals(alipayPublicKey)) {
+            log.error("支付宝公钥未配置，无法校验支付回调签名，拒绝处理支付回调！");
+            return NOTIFY_FAILURE;
+        }
+        //缺少签名的回调不可能通过验签，提前失败关闭
+        if (StrUtil.isEmpty(params.get("sign"))) {
+            log.warn("支付回调缺少签名参数！");
+            return NOTIFY_FAILURE;
+        }
+        //调用SDK验证签名，签名算法固定使用服务端配置（AlipayConfig已限制为RSA2），
+        //不使用回调参数中攻击者可控的sign_type，避免验签算法被降级
+        boolean signVerified;
         try {
-            //调用SDK验证签名
-            signVerified = AlipaySignature.rsaCheckV1(params, alipayConfig.getAlipayPublicKey(), alipayConfig.getCharset(), alipayConfig.getSignType());
+            signVerified = AlipaySignature.rsaCheckV1(params, alipayPublicKey, alipayConfig.getCharset(), alipayConfig.getSignType());
         } catch (AlipayApiException e) {
+            //验签异常同样视为验签失败，不允许继续处理订单
             log.error("支付回调签名校验异常！",e);
-            e.printStackTrace();
+            return NOTIFY_FAILURE;
         }
-        if (signVerified) {
-            String tradeStatus = params.get("trade_status");
-            if("TRADE_SUCCESS".equals(tradeStatus)){
-                result = "success";
-                log.info("notify方法被调用了，tradeStatus:{}",tradeStatus);
-                String outTradeNo = params.get("out_trade_no");
-                portalOrderService.paySuccessByOrderSn(outTradeNo,1);
-            }else{
-                log.warn("订单未支付成功，trade_status:{}",tradeStatus);
-            }
-        } else {
+        if (!signVerified) {
             log.warn("支付回调签名校验失败！");
+            return NOTIFY_FAILURE;
         }
-        return result;
+        //验签使用的是支付宝平台公钥，其他商户应用的回调也能验签通过，必须校验应用ID为本商户应用
+        String appId = params.get("app_id");
+        if (StrUtil.isEmpty(appId) || !appId.equals(StrUtil.trim(alipayConfig.getAppId()))) {
+            log.warn("支付回调应用ID与配置不一致，拒绝处理支付回调！");
+            return NOTIFY_FAILURE;
+        }
+        String tradeStatus = params.get("trade_status");
+        if(!"TRADE_SUCCESS".equals(tradeStatus)){
+            log.warn("订单未支付成功，trade_status:{}",tradeStatus);
+            return NOTIFY_FAILURE;
+        }
+        String outTradeNo = params.get("out_trade_no");
+        if (StrUtil.isEmpty(outTradeNo)) {
+            log.warn("支付回调缺少商户订单号！");
+            return NOTIFY_FAILURE;
+        }
+        //只有仍处于待付款状态的订单才需要处理，重复或被重放的回调不会再次触发订单完成
+        OmsOrder order = getUnpaidOrder(outTradeNo);
+        if (order == null) {
+            log.info("待付款订单不存在或已处理，忽略本次支付回调，outTradeNo:{}",outTradeNo);
+            return NOTIFY_SUCCESS;
+        }
+        //回调金额必须不小于订单应付金额，避免少付金额的回调把订单置为已支付
+        if (!isNotifyAmountEnough(params.get("total_amount"), order.getPayAmount())) {
+            log.error("支付回调金额与订单应付金额不一致，拒绝处理支付回调，outTradeNo:{}",outTradeNo);
+            return NOTIFY_FAILURE;
+        }
+        log.info("notify方法被调用了，tradeStatus:{}",tradeStatus);
+        portalOrderService.paySuccessByOrderSn(outTradeNo,1);
+        return NOTIFY_SUCCESS;
+    }
+
+    /**
+     * 查询指定订单号待付款且未删除的订单，不存在时返回null
+     */
+    private OmsOrder getUnpaidOrder(String orderSn) {
+        OmsOrderExample example = new OmsOrderExample();
+        example.createCriteria()
+                .andOrderSnEqualTo(orderSn)
+                .andStatusEqualTo(0)
+                .andDeleteStatusEqualTo(0);
+        List<OmsOrder> orderList = orderMapper.selectByExample(example);
+        if (CollUtil.isEmpty(orderList)) {
+            return null;
+        }
+        return orderList.get(0);
+    }
+
+    /**
+     * 校验支付回调金额是否不小于订单应付金额，
+     * 回调金额缺失、格式非法或订单应付金额未知时返回false（失败关闭）
+     */
+    private boolean isNotifyAmountEnough(String notifyTotalAmount, BigDecimal orderPayAmount) {
+        if (StrUtil.isEmpty(notifyTotalAmount) || orderPayAmount == null) {
+            return false;
+        }
+        try {
+            return new BigDecimal(notifyTotalAmount).compareTo(orderPayAmount) >= 0;
+        } catch (NumberFormatException e) {
+            log.warn("支付回调金额格式非法！");
+            return false;
+        }
     }
 
     @Override
