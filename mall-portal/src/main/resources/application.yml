@@ -35,6 +35,8 @@ secure:
       - /product/**
       - /brand/**
       - /alipay/**
+  cors:
+    allowed-origins: [] #跨域访问来源白名单，为空时认证/鉴权失败的响应不返回跨域响应头，不支持通配符
 
 springdoc:
   swagger-ui:
