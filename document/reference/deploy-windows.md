@@ -21,7 +21,8 @@
 - 下载后按提示进行安装
 - 导入document/sql下的mall.sql文件
 - 注意：mall.sql中不包含任何密码哈希，导入后所有账号密码为占位符`!LOCKED`，无法直接登录
-- 设置账号密码（由环境变量提供，在运行时生成BCrypt哈希写入数据库）：
+- 设置后台账号密码（方式一，Windows下无需mysql客户端）：启动mall-admin前设置环境变量`MALL_ADMIN_PASS`（账号由`MALL_ADMIN_USER`指定，默认`admin`），应用启动时会为仍处于锁定状态的账号生成BCrypt哈希写入数据库；已经设置过密码的账号不会被覆盖，指定的账号不存在时应用会启动失败
+- 设置账号密码（方式二，可同时处理会员账号，需要mysql客户端）：
 `MALL_DB_PASSWORD='数据库密码' MALL_ADMIN_PASS='后台账号密码' bash document/sh/seed-credentials.sh`
 - 更多环境变量说明参考项目根目录README.md的「搭建步骤」章节
 

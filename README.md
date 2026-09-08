@@ -183,7 +183,9 @@ mall
 
 - 导入`document/sql/mall.sql`创建数据库及初始数据;
 - 注意：为避免硬编码凭证进入代码仓库，`mall.sql`中不再包含任何密码哈希，导入后所有后台账号（`ums_admin`）与会员账号（`ums_member`）的密码均为占位符`!LOCKED`，此时无法登录;
-- 执行`document/sh/seed-credentials.sh`，由环境变量提供的密码在运行时生成BCrypt哈希并写入数据库（需要`mysql`客户端，以及`python3`的`bcrypt`/`passlib`模块或`htpasswd`用于生成哈希）:
+- 设置密码有两种方式，任选其一（都只从环境变量读取密码，不会把凭证写回代码仓库）:
+    - 方式一（无需mysql客户端）：启动`mall-admin`时设置环境变量`MALL_ADMIN_PASS`（账号由`MALL_ADMIN_USER`指定，默认`admin`，支持逗号分隔多个账号），应用启动时会用同一个`BCryptPasswordEncoder`为**仍处于锁定状态**的账号生成哈希并写入数据库，同时清理Redis中缓存的旧记录;已经拥有合法BCrypt哈希的账号不会被覆盖，因此该机制无法重置或接管已启用的账号;若`MALL_ADMIN_PASS`已设置但指定账号不存在，应用会启动失败以暴露配置错误;未设置`MALL_ADMIN_PASS`时应用不做任何改动，账号保持锁定;
+    - 方式二（批量、含会员账号）：执行`document/sh/seed-credentials.sh`，由环境变量提供的密码在运行时生成BCrypt哈希并写入数据库（需要`mysql`客户端，以及`python3`的`bcrypt`/`passlib`模块或`htpasswd`用于生成哈希）:
 
     ``` bash
     MALL_DB_PASSWORD='数据库密码' \
@@ -192,7 +194,7 @@ mall
       bash document/sh/seed-credentials.sh
     ```
 
-- 支持的环境变量:
+- 支持的环境变量（`MALL_ADMIN_USER`/`MALL_ADMIN_PASS`同时被`mall-admin`启动时的账号初始化使用，其余变量仅用于上述脚本）:
 
 | 环境变量         | 说明                                          | 默认值    |
 | ---------------- | --------------------------------------------- | --------- |
@@ -209,7 +211,8 @@ mall
 | MALL_REDIS_PORT  | Redis端口（可选）                              | 6379      |
 
 - 其余演示账号（如`test`、`macro`、`productAdmin`等）默认保持锁定状态，需要时通过`MALL_ADMIN_USER`/`MALL_MEMBER_USER`指定后重新执行脚本即可;
-- 接口冒烟脚本`harness/e2e_apis.sh`同样使用`MALL_ADMIN_USER`/`MALL_ADMIN_PASS`，不再内置默认密码;提供`MALL_DB_PASSWORD`时会自动调用上述脚本完成账号密码初始化。
+- 会员账号（`ums_member`）只能通过`document/sh/seed-credentials.sh`（方式二）设置密码，应用启动时的初始化仅覆盖后台账号;
+- 接口冒烟脚本`harness/e2e_apis.sh`同样使用`MALL_ADMIN_USER`/`MALL_ADMIN_PASS`，不再内置默认密码;提供`MALL_DB_PASSWORD`（且存在`mysql`客户端）时会自动调用上述脚本完成账号密码初始化，否则依赖`mall-admin`启动时用`MALL_ADMIN_PASS`完成的账号初始化，两者都不可用时脚本直接失败退出。
 
 > Windows环境部署
 
