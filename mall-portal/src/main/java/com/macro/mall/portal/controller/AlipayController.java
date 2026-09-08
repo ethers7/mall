@@ -10,14 +10,16 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Controller;
+import org.springframework.util.MultiValueMap;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestMethod;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseBody;
 
-import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import java.io.IOException;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.regex.Pattern;
 
@@ -83,11 +85,13 @@ public class AlipayController {
 
     @Operation(summary = "支付宝异步回调",description = "必须为POST请求，执行成功返回success，执行失败返回failure")
     @RequestMapping(value = "/notify", method = RequestMethod.POST)
-    public String notify(HttpServletRequest request){
+    public String notify(@RequestParam MultiValueMap<String, String> requestParams){
         Map<String, String> params;
         try {
-            // 回调参数完全由外部提供，校验通过后才允许进入签名校验及订单处理流程
-            params = extractNotifyParams(request);
+            // 回调参数完全由外部提供，校验通过后才允许进入签名校验及订单处理流程；
+            // 使用MultiValueMap绑定可以拿到本次请求的全部回调参数（包括支付宝后续新增的参数），
+            // 且同名参数的多个值都会被保留，便于识别同名参数走私
+            params = extractNotifyParams(requestParams);
         } catch (IllegalArgumentException e) {
             log.warn("支付宝异步回调参数校验失败：{}", e.getMessage());
             return NOTIFY_FAILURE;
@@ -99,22 +103,24 @@ public class AlipayController {
      * 提取并校验支付宝异步回调参数，参数名、参数值均采用白名单校验，
      * 校验不通过时抛出异常，由调用方返回failure（失败关闭）。
      */
-    private Map<String, String> extractNotifyParams(HttpServletRequest request) {
-        Map<String, String[]> requestParams = request.getParameterMap();
+    private Map<String, String> extractNotifyParams(MultiValueMap<String, String> requestParams) {
+        if (requestParams == null) {
+            throw new IllegalArgumentException("回调参数缺失");
+        }
         if (requestParams.size() > MAX_NOTIFY_PARAM_COUNT) {
             throw new IllegalArgumentException("回调参数个数超过上限");
         }
         Map<String, String> params = new HashMap<>();
-        for (Map.Entry<String, String[]> entry : requestParams.entrySet()) {
+        for (Map.Entry<String, List<String>> entry : requestParams.entrySet()) {
             String name = entry.getKey();
             if (name == null || !NOTIFY_PARAM_NAME_PATTERN.matcher(name).matches()) {
                 throw new IllegalArgumentException("回调参数名不合法");
             }
-            String[] values = entry.getValue();
-            if (values == null || values.length != 1) {
+            List<String> values = entry.getValue();
+            if (values == null || values.size() != 1) {
                 throw new IllegalArgumentException("回调参数值缺失或重复");
             }
-            String value = values[0];
+            String value = values.get(0);
             if (value == null || value.length() > MAX_NOTIFY_PARAM_VALUE_LENGTH
                     || CONTROL_CHAR_PATTERN.matcher(value).find()) {
                 throw new IllegalArgumentException("回调参数值不合法");

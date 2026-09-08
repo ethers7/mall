@@ -14,8 +14,12 @@ import com.macro.mall.portal.service.impl.AlipayServiceImpl;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.springframework.core.MethodParameter;
 import org.springframework.mock.web.MockHttpServletRequest;
 import org.springframework.test.util.ReflectionTestUtils;
+import org.springframework.util.MultiValueMap;
+import org.springframework.web.context.request.ServletWebRequest;
+import org.springframework.web.method.annotation.RequestParamMapMethodArgumentResolver;
 
 import java.math.BigDecimal;
 import java.nio.charset.StandardCharsets;
@@ -29,9 +33,11 @@ import java.util.ArrayList;
 import java.util.Base64;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -54,6 +60,16 @@ class AlipayNotifyHarnessTest {
     private static final String APP_ID = "2021000000000001";
     private static final String ORDER_SN = "202406150101000001";
     private static final String ORDER_PAY_AMOUNT = "199.00";
+    /** 一组格式合法的异步回调参数（签名为占位值，仅用于校验参数绑定与参数校验流程） */
+    private static final Map<String, String> BASE_NOTIFY_PARAMS = Map.ofEntries(
+            Map.entry("notify_time", "2024-06-15 13:45:22"),
+            Map.entry("trade_status", "TRADE_SUCCESS"),
+            Map.entry("out_trade_no", ORDER_SN),
+            Map.entry("trade_no", "2024061522001450071408123456"),
+            Map.entry("total_amount", ORDER_PAY_AMOUNT),
+            Map.entry("subject", "订单商品"),
+            Map.entry("sign_type", "RSA2"),
+            Map.entry("sign", "TWFjcm9NYWxsU2lnbmF0dXJlPT0="));
     /** 测试内生成的支付宝公钥（Base64编码的X509格式） */
     private static String alipayPublicKey;
     /** 测试内生成的支付宝私钥（Base64编码的PKCS8格式），仅用于在测试中构造合法签名 */
@@ -300,21 +316,74 @@ class AlipayNotifyHarnessTest {
     }
 
     private MockHttpServletRequest notifyRequest() {
+        return notifyRequest(BASE_NOTIFY_PARAMS);
+    }
+
+    /** notifyRequest()构造的回调参数名集合，附加未知参数名后作为期望的绑定结果 */
+    private static Set<String> expectedParamNames(String... extraNames) {
+        Set<String> names = new HashSet<>(BASE_NOTIFY_PARAMS.keySet());
+        names.addAll(List.of(extraNames));
+        return names;
+    }
+
+    /** 用给定的回调参数构造异步回调请求 */
+    private MockHttpServletRequest notifyRequest(Map<String, String> params) {
         MockHttpServletRequest request = new MockHttpServletRequest("POST", "/alipay/notify");
-        request.setParameter("notify_time", "2024-06-15 13:45:22");
-        request.setParameter("trade_status", "TRADE_SUCCESS");
-        request.setParameter("out_trade_no", "202406150101000001");
-        request.setParameter("trade_no", "2024061522001450071408123456");
-        request.setParameter("total_amount", "199.00");
-        request.setParameter("subject", "订单商品");
-        request.setParameter("sign_type", "RSA2");
-        request.setParameter("sign", "TWFjcm9NYWxsU2lnbmF0dXJlPT0=");
+        for (Map.Entry<String, String> entry : params.entrySet()) {
+            request.setParameter(entry.getKey(), entry.getValue());
+        }
         return request;
     }
 
+    /**
+     * 用Spring MVC真实的参数解析器（RequestParamMapMethodArgumentResolver，即处理
+     * 不带参数名的@RequestParam Map/MultiValueMap入参的解析器）把请求参数绑定成
+     * MultiValueMap，确保测试覆盖的是线上真实的绑定行为
+     */
+    @SuppressWarnings("unchecked")
+    private MultiValueMap<String, String> bindNotifyParams(MockHttpServletRequest request) throws Exception {
+        MethodParameter parameter = notifyMethodParameter();
+        RequestParamMapMethodArgumentResolver resolver = new RequestParamMapMethodArgumentResolver();
+        //该入参必须由Map解析器处理，否则绑定语义无从保证
+        assertTrue(resolver.supportsParameter(parameter));
+        Object bound = resolver.resolveArgument(parameter, null, new ServletWebRequest(request), null);
+        return (MultiValueMap<String, String>) bound;
+    }
+
+    private MethodParameter notifyMethodParameter() throws Exception {
+        return new MethodParameter(AlipayController.class.getMethod("notify", MultiValueMap.class), 0);
+    }
+
+    /** 按线上流程绑定请求参数后调用回调接口 */
+    private String notifyThroughBinding(MockHttpServletRequest request) throws Exception {
+        return alipayController.notify(bindNotifyParams(request));
+    }
+
     @Test
-    void validNotifyParamsReachSignatureVerification() {
-        String result = alipayController.notify(notifyRequest());
+    void springBindingKeepsEveryPostedParamAndEveryDuplicateValue() throws Exception {
+        MockHttpServletRequest request = notifyRequest();
+        //支付宝可能随时新增参数，未在方法签名上单独声明的参数也必须完整绑定
+        request.setParameter("fund_bill_list", "[{\"amount\":\"199.00\"}]");
+        request.setParameter("future_param", "future_value");
+        //同名参数的每一个值都必须保留，否则无法识别同名参数走私
+        request.setParameter("trade_status", "TRADE_SUCCESS", "TRADE_CLOSED");
+        MultiValueMap<String, String> bound = bindNotifyParams(request);
+        //绑定结果必须包含本次请求的全部参数名，一个都不能丢
+        assertEquals(expectedParamNames("fund_bill_list", "future_param"), bound.keySet());
+        BASE_NOTIFY_PARAMS.forEach((name, value) -> {
+            if (!"trade_status".equals(name)) {
+                assertEquals(List.of(value), bound.get(name));
+            }
+        });
+        assertEquals(List.of("[{\"amount\":\"199.00\"}]"), bound.get("fund_bill_list"));
+        assertEquals(List.of("future_value"), bound.get("future_param"));
+        //同名参数的两个值都必须以独立的列表元素保留
+        assertEquals(List.of("TRADE_SUCCESS", "TRADE_CLOSED"), bound.get("trade_status"));
+    }
+
+    @Test
+    void validNotifyParamsReachSignatureVerification() throws Exception {
+        String result = notifyThroughBinding(notifyRequest());
         assertEquals("success", result);
         assertTrue(alipayService.notifyCalled);
         assertEquals("202406150101000001", alipayService.notifyParams.get("out_trade_no"));
@@ -323,72 +392,124 @@ class AlipayNotifyHarnessTest {
     }
 
     @Test
-    void illegalParamNameIsRejected() {
+    void illegalParamNameIsRejected() throws Exception {
         MockHttpServletRequest request = notifyRequest();
         request.setParameter("out_trade_no[]", "202406150101000001");
-        assertEquals("failure", alipayController.notify(request));
+        assertEquals("failure", notifyThroughBinding(request));
         assertFalse(alipayService.notifyCalled);
         assertNull(alipayService.notifyParams);
     }
 
     @Test
-    void duplicatedParamValuesAreRejected() {
+    void unknownParamNameOnWhitelistIsForwardedForVerification() throws Exception {
+        MockHttpServletRequest request = notifyRequest();
+        //参数名符合白名单的未知（后续新增）参数按原策略放行，并原样进入验签参数集合
+        request.setParameter("fund_bill_list", "[{\"amount\":\"199.00\"}]");
+        request.setParameter("future_param", "future_value");
+        assertEquals("success", notifyThroughBinding(request));
+        assertTrue(alipayService.notifyCalled);
+        assertEquals("[{\"amount\":\"199.00\"}]", alipayService.notifyParams.get("fund_bill_list"));
+        assertEquals("future_value", alipayService.notifyParams.get("future_param"));
+        //验签需要完整的回调参数集合，未知参数不能被过滤掉
+        assertEquals(expectedParamNames("fund_bill_list", "future_param"), alipayService.notifyParams.keySet());
+    }
+
+    @Test
+    void duplicatedParamValuesAreRejected() throws Exception {
         MockHttpServletRequest request = notifyRequest();
         request.setParameter("out_trade_no", "202406150101000001", "202406150101000002");
-        assertEquals("failure", alipayController.notify(request));
+        //绑定阶段两个值都在，校验阶段必须因同名参数重复而失败关闭
+        assertEquals(List.of("202406150101000001", "202406150101000002"),
+                bindNotifyParams(request).get("out_trade_no"));
+        assertEquals("failure", notifyThroughBinding(request));
         assertFalse(alipayService.notifyCalled);
     }
 
     @Test
-    void controlCharactersInParamValueAreRejected() {
+    void duplicatedUnknownParamValuesAreRejected() throws Exception {
+        MockHttpServletRequest request = notifyRequest();
+        //未知参数同名重复同样必须被拒绝，避免绕过重复参数校验
+        request.setParameter("future_param", "value_a", "value_b");
+        assertEquals("failure", notifyThroughBinding(request));
+        assertFalse(alipayService.notifyCalled);
+    }
+
+    @Test
+    void controlCharactersInParamValueAreRejected() throws Exception {
         MockHttpServletRequest request = notifyRequest();
         request.setParameter("subject", "订单商品\r\nsign=forged");
-        assertEquals("failure", alipayController.notify(request));
+        assertEquals("failure", notifyThroughBinding(request));
         assertFalse(alipayService.notifyCalled);
     }
 
     @Test
-    void oversizedParamValueIsRejected() {
+    void oversizedParamValueIsRejected() throws Exception {
         MockHttpServletRequest request = notifyRequest();
         request.setParameter("passback_params", "a".repeat(4097));
-        assertEquals("failure", alipayController.notify(request));
+        assertEquals("failure", notifyThroughBinding(request));
         assertFalse(alipayService.notifyCalled);
     }
 
     @Test
-    void malformedOutTradeNoIsRejected() {
+    void malformedOutTradeNoIsRejected() throws Exception {
         MockHttpServletRequest request = notifyRequest();
         request.setParameter("out_trade_no", "202406150101000001' or '1'='1");
-        assertEquals("failure", alipayController.notify(request));
+        assertEquals("failure", notifyThroughBinding(request));
         assertFalse(alipayService.notifyCalled);
     }
 
     @Test
-    void malformedTradeNoIsRejected() {
+    void malformedTradeNoIsRejected() throws Exception {
         MockHttpServletRequest request = notifyRequest();
         request.setParameter("trade_no", "../../../etc/passwd");
-        assertEquals("failure", alipayController.notify(request));
+        assertEquals("failure", notifyThroughBinding(request));
         assertFalse(alipayService.notifyCalled);
     }
 
     @Test
-    void tooManyParamsAreRejected() {
+    void tooManyParamsAreRejected() throws Exception {
         MockHttpServletRequest request = notifyRequest();
         for (int i = 0; i < 101; i++) {
             request.setParameter("param_" + i, "value");
         }
-        assertEquals("failure", alipayController.notify(request));
+        assertEquals("failure", notifyThroughBinding(request));
         assertFalse(alipayService.notifyCalled);
     }
 
     @Test
-    void notifyWithoutTradeNumbersIsStillAccepted() {
+    void notifyWithoutTradeNumbersIsStillAccepted() throws Exception {
         MockHttpServletRequest request = new MockHttpServletRequest("POST", "/alipay/notify");
         request.setParameter("notify_type", "trade_status_sync");
         request.setParameter("sign_type", "RSA2");
         request.setParameter("sign", "TWFjcm9NYWxsU2lnbmF0dXJlPT0=");
-        assertEquals("success", alipayController.notify(request));
+        assertEquals("success", notifyThroughBinding(request));
         assertTrue(alipayService.notifyCalled);
+    }
+
+    @Test
+    void signedNotifyThroughBindingCompletesOrder() throws Exception {
+        //完整链路：请求参数绑定 -> 参数校验 -> 验签 -> 订单完成，验签使用的参数集合必须与网关签名的内容一致
+        ReflectionTestUtils.setField(alipayController, "alipayService", alipayServiceImpl);
+        givenUnpaidOrder();
+        Map<String, String> signedParams = signedNotifyParams("SHA256withRSA", "RSA2");
+        assertEquals("success", notifyThroughBinding(notifyRequest(signedParams)));
+        verify(portalOrderService).paySuccessByOrderSn(ORDER_SN, 1);
+    }
+
+    @Test
+    void signedNotifyWithUnknownParamThroughBindingCompletesOrder() throws Exception {
+        //支付宝新增参数也会参与网关签名，绑定与校验不能丢弃这些参数，否则验签必然失败
+        ReflectionTestUtils.setField(alipayController, "alipayService", alipayServiceImpl);
+        givenUnpaidOrder();
+        Map<String, String> content = new LinkedHashMap<>();
+        content.put("app_id", APP_ID);
+        content.put("trade_status", "TRADE_SUCCESS");
+        content.put("out_trade_no", ORDER_SN);
+        content.put("total_amount", ORDER_PAY_AMOUNT);
+        content.put("future_param", "future_value");
+        Map<String, String> signedParams = signParams(content, "SHA256withRSA", "RSA2");
+        assertEquals("success", notifyThroughBinding(notifyRequest(signedParams)));
+        verify(portalOrderService).paySuccessByOrderSn(ORDER_SN, 1);
     }
 
     @Test
