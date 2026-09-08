@@ -5,6 +5,10 @@ services:
     container_name: mysql
     command: mysqld --character-set-server=utf8mb4 --collation-server=utf8mb4_unicode_ci
     restart: always
+    read_only: true #容器根文件系统只读，防止运行时被写入或篡改
+    tmpfs:
+      - /var/run/mysqld #mysqld的socket和pid文件目录需可写
+      - /tmp #临时表及初始化脚本的临时文件目录需可写
     environment:
       MYSQL_ROOT_PASSWORD: root #设置root帐号密码
     ports:
@@ -17,6 +21,9 @@ services:
     image: redis:7
     container_name: redis
     command: redis-server --appendonly yes
+    read_only: true #容器根文件系统只读，防止运行时被写入或篡改
+    tmpfs:
+      - /tmp #临时文件目录需可写（RDB/AOF数据写入已挂载的/data）
     volumes:
       - /mydata/redis/data:/data #数据文件目录挂载
     ports:
@@ -24,6 +31,11 @@ services:
   nginx:
     image: nginx:1.22
     container_name: nginx
+    read_only: true #容器根文件系统只读，防止运行时被写入或篡改
+    tmpfs:
+      - /var/cache/nginx #nginx的缓存及临时文件目录需可写
+      - /var/run #nginx.pid文件目录需可写
+      - /tmp #启动脚本的临时文件目录需可写
     volumes:
       - /mydata/nginx/conf:/etc/nginx #配置文件目录挂载
       - /mydata/nginx/html:/usr/share/nginx/html #静态资源根目录挂载
@@ -33,6 +45,11 @@ services:
   rabbitmq:
     image: rabbitmq:3.9.11-management
     container_name: rabbitmq
+    read_only: true #容器根文件系统只读，防止运行时被写入或篡改
+    tmpfs:
+      - /var/log/rabbitmq #日志目录需可写
+      - /var/run #Erlang运行时的pid及socket目录需可写
+      - /tmp #临时文件目录需可写（数据及.erlang.cookie写入已挂载的/var/lib/rabbitmq）
     volumes:
       - /mydata/rabbitmq/data:/var/lib/rabbitmq #数据文件目录挂载
     ports:
@@ -45,6 +62,10 @@ services:
       - "cluster.name=elasticsearch" #设置集群名称为elasticsearch
       - "discovery.type=single-node" #以单一节点模式启动
       - "ES_JAVA_OPTS=-Xms512m -Xmx1024m" #设置es使用的jvm内存大小
+    read_only: true #容器根文件系统只读，防止运行时被写入或篡改
+    tmpfs:
+      - /usr/share/elasticsearch/logs #日志目录需可写
+      - /tmp #JNA及JVM临时目录需可写
     volumes:
       - /mydata/elasticsearch/plugins:/usr/share/elasticsearch/plugins #插件文件目录挂载
       - /mydata/elasticsearch/data:/usr/share/elasticsearch/data #数据文件目录挂载
@@ -56,6 +77,11 @@ services:
     container_name: logstash
     environment:
       - TZ=Asia/Shanghai
+    read_only: true #容器根文件系统只读，防止运行时被写入或篡改
+    tmpfs:
+      - /usr/share/logstash/data #path.data（队列、sincedb、.lock）需可写
+      - /usr/share/logstash/logs #日志目录需可写
+      - /tmp #JRuby及JVM临时目录需可写
     volumes:
       - /mydata/logstash/logstash.conf:/usr/share/logstash/pipeline/logstash.conf #配置文件挂载
     depends_on:
@@ -70,6 +96,10 @@ services:
   kibana:
     image: kibana:7.17.3
     container_name: kibana
+    read_only: true #容器根文件系统只读，防止运行时被写入或篡改
+    tmpfs:
+      - /usr/share/kibana/data #uuid及优化缓存目录需可写
+      - /tmp #Node.js临时目录需可写
     links:
       - elasticsearch:es #可以用es这个域名访问elasticsearch服务
     depends_on:
@@ -81,6 +111,10 @@ services:
   mongo:
     image: mongo:4
     container_name: mongo
+    read_only: true #容器根文件系统只读，防止运行时被写入或篡改
+    tmpfs:
+      - /tmp #mongod的unix socket（/tmp/mongodb-27017.sock）需可写
+      - /data/configdb #配置数据库目录需可写
     volumes:
       - /mydata/mongo/db:/data/db #数据文件目录挂载
     ports:
@@ -89,6 +123,10 @@ services:
     image: minio/minio
     container_name: minio
     command: server /data --console-address ":9001" #指定数据目录及console运行端口启动
+    read_only: true #容器根文件系统只读，防止运行时被写入或篡改
+    tmpfs:
+      - /root/.minio #证书目录需可写（配置数据写入已挂载的/data/.minio.sys）
+      - /tmp #临时文件目录需可写
     volumes:
       - /mydata/minio/data:/data #数据目录挂载
     environment:
