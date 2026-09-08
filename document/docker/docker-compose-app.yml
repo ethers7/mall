@@ -10,6 +10,8 @@ services:
       - /etc/localtime:/etc/localtime
     environment:
       - 'TZ="Asia/Shanghai"'
+      #JWT签名密钥，需在部署环境中提供随机生成的强密钥，未设置时容器启动失败
+      - JWT_SECRET=${JWT_SECRET:?JWT_SECRET must be set to a randomly generated secret}
     external_links:
       - mysql:db #可以用db这个域名访问mysql服务
   mall-search:
@@ -35,6 +37,8 @@ services:
       - /etc/localtime:/etc/localtime
     environment:
       - 'TZ="Asia/Shanghai"'
+      #JWT签名密钥，需在部署环境中提供随机生成的强密钥，未设置时容器启动失败
+      - JWT_SECRET=${JWT_SECRET:?JWT_SECRET must be set to a randomly generated secret}
     external_links:
       - redis:redis #可以用redis这个域名访问redis服务
       - mongo:mongo #可以用mongo这个域名访问mongo服务

@@ -18,7 +18,7 @@ mybatis:
 
 jwt:
   tokenHeader: Authorization #JWT存储的请求头
-  secret: mall-admin-secret #JWT加解密使用的密钥
+  secret: ${JWT_SECRET} #JWT加解密使用的密钥，必须通过环境变量JWT_SECRET注入随机生成的强密钥，未配置时启动失败
   expiration: 604800 #JWT的超期限时间(60*60*24*7)
   tokenHead: 'Bearer '  #JWT负载中拿到开头
 

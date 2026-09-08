@@ -38,8 +38,13 @@ public class JwtTokenUtil {
 
     /**
      * 获取签名密钥
+     * 密钥必须通过外部配置jwt.secret（如环境变量JWT_SECRET）提供，
+     * 未配置时直接抛出异常，避免使用源码中的硬编码默认密钥签发或校验token
      */
     private byte[] getSigningKey() {
+        if (StrUtil.isBlank(secret)) {
+            throw new IllegalStateException("JWT签名密钥未配置，请通过配置项jwt.secret（环境变量JWT_SECRET）提供随机生成的强密钥");
+        }
         return secret.getBytes(StandardCharsets.UTF_8);
     }
 
