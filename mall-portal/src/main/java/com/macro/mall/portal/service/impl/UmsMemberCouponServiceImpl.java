@@ -15,8 +15,8 @@ import org.springframework.stereotype.Service;
 import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.Date;
+import java.security.SecureRandom;
 import java.util.List;
-import java.util.Random;
 import java.util.stream.Collectors;
 
 /**
@@ -39,6 +39,7 @@ public class UmsMemberCouponServiceImpl implements UmsMemberCouponService {
     private SmsCouponProductCategoryRelationMapper couponProductCategoryRelationMapper;
     @Autowired
     private PmsProductMapper productMapper;
+    private static final SecureRandom SECURE_RANDOM = new SecureRandom();
     @Override
     public void add(Long couponId) {
         UmsMember currentMember = memberService.getCurrentMember();
@@ -88,7 +89,7 @@ public class UmsMemberCouponServiceImpl implements UmsMemberCouponService {
         String timeMillisStr = currentTimeMillis.toString();
         sb.append(timeMillisStr.substring(timeMillisStr.length() - 8));
         for (int i = 0; i < 4; i++) {
-            sb.append(new Random().nextInt(10));
+            sb.append(SECURE_RANDOM.nextInt(10));
         }
         String memberIdStr = memberId.toString();
         if (memberIdStr.length() <= 4) {
