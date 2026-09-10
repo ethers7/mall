@@ -3,6 +3,9 @@ services:
   mysql:
     image: mysql:5.7
     container_name: mysql
+    security_opt:
+      - no-new-privileges:true
+    read_only: true
     command: mysqld --character-set-server=utf8mb4 --collation-server=utf8mb4_unicode_ci
     restart: always
     environment:
@@ -13,34 +16,57 @@ services:
       - /mydata/mysql/data:/var/lib/mysql #数据文件目录挂载
       - /mydata/mysql/conf:/etc/mysql #配置文件目录挂载
       - /mydata/mysql/log:/var/log/mysql #日志文件目录挂载
+    tmpfs:
+      - /tmp
+      - /var/run/mysqld
   redis:
     image: redis:7
     container_name: redis
+    security_opt:
+      - no-new-privileges:true
+    read_only: true
     command: redis-server --appendonly yes
     volumes:
       - /mydata/redis/data:/data #数据文件目录挂载
+    tmpfs:
+      - /tmp
     ports:
       - 6379:6379
   nginx:
     image: nginx:1.22
     container_name: nginx
+    security_opt:
+      - no-new-privileges:true
+    read_only: true
     volumes:
       - /mydata/nginx/conf:/etc/nginx #配置文件目录挂载
       - /mydata/nginx/html:/usr/share/nginx/html #静态资源根目录挂载
       - /mydata/nginx/logs:/var/log/nginx #日志文件目录挂载
+    tmpfs:
+      - /tmp
+      - /var/run
+      - /var/cache/nginx
     ports:
       - 80:80
   rabbitmq:
     image: rabbitmq:3.9.11-management
     container_name: rabbitmq
+    security_opt:
+      - no-new-privileges:true
+    read_only: true
     volumes:
       - /mydata/rabbitmq/data:/var/lib/rabbitmq #数据文件目录挂载
+    tmpfs:
+      - /tmp
     ports:
       - 5672:5672
       - 15672:15672
   elasticsearch:
     image: elasticsearch:7.17.3
     container_name: elasticsearch
+    security_opt:
+      - no-new-privileges:true
+    read_only: true
     environment:
       - "cluster.name=elasticsearch" #设置集群名称为elasticsearch
       - "discovery.type=single-node" #以单一节点模式启动
@@ -48,16 +74,26 @@ services:
     volumes:
       - /mydata/elasticsearch/plugins:/usr/share/elasticsearch/plugins #插件文件目录挂载
       - /mydata/elasticsearch/data:/usr/share/elasticsearch/data #数据文件目录挂载
+    tmpfs:
+      - /tmp
+      - /usr/share/elasticsearch/logs
     ports:
       - 9200:9200
       - 9300:9300
   logstash:
     image: logstash:7.17.3
     container_name: logstash
+    security_opt:
+      - no-new-privileges:true
+    read_only: true
     environment:
       - TZ=Asia/Shanghai
     volumes:
       - /mydata/logstash/logstash.conf:/usr/share/logstash/pipeline/logstash.conf #配置文件挂载
+    tmpfs:
+      - /tmp
+      - /usr/share/logstash/data
+      - /usr/share/logstash/logs
     depends_on:
       - elasticsearch #kibana在elasticsearch启动之后再启动
     links:
@@ -70,27 +106,44 @@ services:
   kibana:
     image: kibana:7.17.3
     container_name: kibana
+    security_opt:
+      - no-new-privileges:true
+    read_only: true
     links:
       - elasticsearch:es #可以用es这个域名访问elasticsearch服务
     depends_on:
       - elasticsearch #kibana在elasticsearch启动之后再启动
     environment:
       - "elasticsearch.hosts=http://es:9200" #设置访问elasticsearch的地址
+    tmpfs:
+      - /tmp
+      - /usr/share/kibana/data
     ports:
       - 5601:5601
   mongo:
     image: mongo:4
     container_name: mongo
+    security_opt:
+      - no-new-privileges:true
+    read_only: true
     volumes:
       - /mydata/mongo/db:/data/db #数据文件目录挂载
+    tmpfs:
+      - /tmp
     ports:
       - 27017:27017
   minio:
     image: minio/minio
     container_name: minio
+    security_opt:
+      - no-new-privileges:true
+    read_only: true
     command: server /data --console-address ":9001" #指定数据目录及console运行端口启动
     volumes:
       - /mydata/minio/data:/data #数据目录挂载
+    tmpfs:
+      - /tmp
+      - /home/minio-user/.minio
     environment:
       - "MINIO_ROOT_USER=minioadmin"
       - "MINIO_ROOT_PASSWORD=minioadmin"

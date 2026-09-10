@@ -6,7 +6,12 @@ set -eu
 BASE="${BASE_URL:-http://127.0.0.1:8080}"
 BASE="${BASE%/}"
 ADMIN_USER="${MALL_ADMIN_USER:-admin}"
-ADMIN_PASS="${MALL_ADMIN_PASS:-macro123}"
+# No hardcoded fallback password: document/sql/mall.sql no longer ships a
+# working seed hash (CWE-798 fix), so the account's real password must be
+# supplied at runtime by whatever seeds the database for this run, and
+# passed in via MALL_ADMIN_PASS. Fail closed instead of silently trying a
+# default that will no longer authenticate.
+ADMIN_PASS="${MALL_ADMIN_PASS:?MALL_ADMIN_PASS must be set to the runtime-seeded admin password (document/sql/mall.sql no longer ships a working default credential)}"
 OUTDIR="${E2E_JUNIT_DIR:-test-results}"
 mkdir -p "$OUTDIR"
 OUT="$OUTDIR/functional-junit.xml"

@@ -20,7 +20,8 @@ public class RestfulAccessDeniedHandler implements AccessDeniedHandler{
     public void handle(HttpServletRequest request,
                        HttpServletResponse response,
                        AccessDeniedException e) throws IOException {
-        response.setHeader("Access-Control-Allow-Origin", "*");
+        // CORS headers are already applied by the application's CorsFilter (see GlobalCorsConfig)
+        // based on its configured allow-list; do not override it here with a permissive wildcard.
         response.setHeader("Cache-Control","no-cache");
         response.setCharacterEncoding("UTF-8");
         response.setContentType("application/json");
