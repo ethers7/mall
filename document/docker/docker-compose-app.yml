@@ -5,11 +5,14 @@ services:
     container_name: mall-admin
     security_opt:
       - no-new-privileges:true
+    read_only: true
     ports:
       - 8080:8080
     volumes:
       - /mydata/app/mall-admin/logs:/var/logs
       - /etc/localtime:/etc/localtime
+    tmpfs:
+      - /tmp
     environment:
       - 'TZ="Asia/Shanghai"'
     external_links:
@@ -19,11 +22,14 @@ services:
     container_name: mall-search
     security_opt:
       - no-new-privileges:true
+    read_only: true
     ports:
       - 8081:8081
     volumes:
       - /mydata/app/mall-search/logs:/var/logs
       - /etc/localtime:/etc/localtime
+    tmpfs:
+      - /tmp
     environment:
       - 'TZ="Asia/Shanghai"'
     external_links:
@@ -34,11 +40,14 @@ services:
     container_name: mall-portal
     security_opt:
       - no-new-privileges:true
+    read_only: true
     ports:
       - 8085:8085
     volumes:
       - /mydata/app/mall-portal/logs:/var/logs
       - /etc/localtime:/etc/localtime
+    tmpfs:
+      - /tmp
     environment:
       - 'TZ="Asia/Shanghai"'
     external_links:
