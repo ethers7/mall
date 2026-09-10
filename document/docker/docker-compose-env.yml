@@ -15,6 +15,10 @@ services:
       - /mydata/mysql/log:/var/log/mysql #日志文件目录挂载
     security_opt:
       - no-new-privileges:true
+    read_only: true
+    tmpfs:
+      - /tmp
+      - /var/run/mysqld
   redis:
     image: redis:7
     container_name: redis
@@ -25,6 +29,9 @@ services:
       - 6379:6379
     security_opt:
       - no-new-privileges:true
+    read_only: true
+    tmpfs:
+      - /tmp
   nginx:
     image: nginx:1.22
     container_name: nginx
@@ -36,6 +43,11 @@ services:
       - 80:80
     security_opt:
       - no-new-privileges:true
+    read_only: true
+    tmpfs:
+      - /tmp
+      - /var/cache/nginx
+      - /var/run
   rabbitmq:
     image: rabbitmq:3.9.11-management
     container_name: rabbitmq
@@ -46,6 +58,9 @@ services:
       - 15672:15672
     security_opt:
       - no-new-privileges:true
+    read_only: true
+    tmpfs:
+      - /tmp
   elasticsearch:
     image: elasticsearch:7.17.3
     container_name: elasticsearch
@@ -61,6 +76,10 @@ services:
       - 9300:9300
     security_opt:
       - no-new-privileges:true
+    read_only: true
+    tmpfs:
+      - /tmp
+      - /usr/share/elasticsearch/logs
   logstash:
     image: logstash:7.17.3
     container_name: logstash
@@ -79,6 +98,11 @@ services:
       - 4563:4563
     security_opt:
       - no-new-privileges:true
+    read_only: true
+    tmpfs:
+      - /tmp
+      - /usr/share/logstash/data
+      - /usr/share/logstash/logs
   kibana:
     image: kibana:7.17.3
     container_name: kibana
@@ -92,6 +116,10 @@ services:
       - 5601:5601
     security_opt:
       - no-new-privileges:true
+    read_only: true
+    tmpfs:
+      - /tmp
+      - /usr/share/kibana/data
   mongo:
     image: mongo:4
     container_name: mongo
@@ -101,6 +129,9 @@ services:
       - 27017:27017
     security_opt:
       - no-new-privileges:true
+    read_only: true
+    tmpfs:
+      - /tmp
   minio:
     image: minio/minio
     container_name: minio
@@ -115,3 +146,7 @@ services:
       - 9001:9001
     security_opt:
       - no-new-privileges:true
+    read_only: true
+    tmpfs:
+      - /tmp
+      - /root/.minio
