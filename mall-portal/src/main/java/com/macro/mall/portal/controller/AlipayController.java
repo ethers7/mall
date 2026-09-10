@@ -1,5 +1,6 @@
 package com.macro.mall.portal.controller;
 
+import cn.hutool.core.util.StrUtil;
 import com.macro.mall.common.api.CommonResult;
 import com.macro.mall.portal.config.AlipayConfig;
 import com.macro.mall.portal.domain.AliPayParam;
@@ -17,6 +18,7 @@ import jakarta.servlet.http.HttpServletResponse;
 import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.regex.Pattern;
 
 /**
  * @auther macrozheng
@@ -28,6 +30,10 @@ import java.util.Map;
 @Tag(name = "AlipayController", description = "支付宝支付相关接口")
 @RequestMapping("/alipay")
 public class AlipayController {
+
+    // 支付宝异步回调中订单号、交易状态等关键字段的合法格式，用于在签名校验前拦截明显畸形的请求
+    private static final Pattern OUT_TRADE_NO_PATTERN = Pattern.compile("^[A-Za-z0-9]{1,64}$");
+    private static final Pattern TRADE_STATUS_PATTERN = Pattern.compile("^[A-Z_]{1,32}$");
 
     @Autowired
     private AlipayConfig alipayConfig;
@@ -58,9 +64,30 @@ public class AlipayController {
         Map<String, String> params = new HashMap<>();
         Map<String, String[]> requestParams = request.getParameterMap();
         for (String name : requestParams.keySet()) {
-            params.put(name, request.getParameter(name));
+            String value = request.getParameter(name);
+            if (value != null) {
+                params.put(name, value.trim());
+            }
+        }
+        // 在进入签名校验及业务处理前，先校验关键字段的基本格式，拒绝明显畸形/非法的回调请求
+        if (!isValidOutTradeNo(params.get("out_trade_no")) || !isValidTradeStatus(params.get("trade_status"))) {
+            return "failure";
         }
         return alipayService.notify(params);
+    }
+
+    /**
+     * 校验支付宝异步回调中的商户订单号格式
+     */
+    private boolean isValidOutTradeNo(String outTradeNo) {
+        return StrUtil.isNotBlank(outTradeNo) && OUT_TRADE_NO_PATTERN.matcher(outTradeNo).matches();
+    }
+
+    /**
+     * 校验支付宝异步回调中的交易状态格式
+     */
+    private boolean isValidTradeStatus(String tradeStatus) {
+        return StrUtil.isNotBlank(tradeStatus) && TRADE_STATUS_PATTERN.matcher(tradeStatus).matches();
     }
 
     @Operation(summary = "支付宝统一收单线下交易查询",description = "订单支付成功返回交易状态：TRADE_SUCCESS")

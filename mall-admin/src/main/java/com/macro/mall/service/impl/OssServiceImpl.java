@@ -18,6 +18,7 @@ import org.springframework.stereotype.Service;
 import jakarta.servlet.http.HttpServletRequest;
 import java.text.SimpleDateFormat;
 import java.util.Date;
+import java.util.regex.Pattern;
 
 /**
  * Oss对象存储管理Service实现类
@@ -27,6 +28,12 @@ import java.util.Date;
 public class OssServiceImpl implements OssService {
 
 	private static final Logger LOGGER = LoggerFactory.getLogger(OssServiceImpl.class);
+	// 回调文件名只允许字母、数字及常见路径分隔符/符号，且不允许出现路径穿越序列
+	private static final Pattern FILENAME_PATTERN = Pattern.compile("^[A-Za-z0-9][A-Za-z0-9/_.\\-]{0,255}$");
+	// 回调mimeType需符合“type/subtype”这种标准MIME类型格式
+	private static final Pattern MIME_TYPE_PATTERN = Pattern.compile("^[A-Za-z0-9]+/[A-Za-z0-9.+\\-]+$");
+	// 回调中的宽、高、文件大小必须是合法的非负整数
+	private static final Pattern NUMERIC_PATTERN = Pattern.compile("^\\d{1,19}$");
 	@Value("${aliyun.oss.policy.expire}")
 	private int ALIYUN_OSS_EXPIRE;
 	@Value("${aliyun.oss.maxSize}")
@@ -90,13 +97,48 @@ public class OssServiceImpl implements OssService {
 	public OssCallbackResult callback(HttpServletRequest request) {
 		OssCallbackResult result= new OssCallbackResult();
 		String filename = request.getParameter("filename");
+		if (!isValidFilename(filename)) {
+			LOGGER.warn("OSS回调中的filename参数非法，拒绝处理：{}", filename);
+			return result;
+		}
 		filename = "http://".concat(ALIYUN_OSS_BUCKET_NAME).concat(".").concat(ALIYUN_OSS_ENDPOINT).concat("/").concat(filename);
 		result.setFilename(filename);
-		result.setSize(request.getParameter("size"));
-		result.setMimeType(request.getParameter("mimeType"));
-		result.setWidth(request.getParameter("width"));
-		result.setHeight(request.getParameter("height"));
+
+		String size = request.getParameter("size");
+		result.setSize(isValidNumeric(size) ? size : null);
+
+		String mimeType = request.getParameter("mimeType");
+		result.setMimeType(isValidMimeType(mimeType) ? mimeType : null);
+
+		String width = request.getParameter("width");
+		result.setWidth(isValidNumeric(width) ? width : null);
+
+		String height = request.getParameter("height");
+		result.setHeight(isValidNumeric(height) ? height : null);
 		return result;
+	}
+
+	/**
+	 * 校验OSS回调中的filename参数，禁止路径穿越及非法字符
+	 */
+	private boolean isValidFilename(String filename) {
+		return filename != null
+				&& !filename.contains("..")
+				&& FILENAME_PATTERN.matcher(filename).matches();
+	}
+
+	/**
+	 * 校验OSS回调中的mimeType参数是否符合标准MIME类型格式
+	 */
+	private boolean isValidMimeType(String mimeType) {
+		return mimeType != null && MIME_TYPE_PATTERN.matcher(mimeType).matches();
+	}
+
+	/**
+	 * 校验OSS回调中的size/width/height参数是否为合法的非负整数
+	 */
+	private boolean isValidNumeric(String value) {
+		return value != null && NUMERIC_PATTERN.matcher(value).matches();
 	}
 
 }
