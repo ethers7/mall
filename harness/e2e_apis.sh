@@ -5,8 +5,15 @@ set -eu
 
 BASE="${BASE_URL:-http://127.0.0.1:8080}"
 BASE="${BASE%/}"
-ADMIN_USER="${MALL_ADMIN_USER:-admin}"
-ADMIN_PASS="${MALL_ADMIN_PASS:-macro123}"
+# NOTE: document/sql/mall.sql no longer ships a real/working bcrypt hash for
+# any seeded ums_admin row (those hashes were rotated to a non-functional
+# placeholder to remove committed crackable credentials from git, CWE-798).
+# This gate therefore provisions its own throwaway admin account at runtime
+# via the public /admin/register API using an env-supplied password instead
+# of depending on the dump's fixture hash — see the "admin bootstrap" step
+# below.
+ADMIN_USER="${MALL_ADMIN_USER:-e2e_admin}"
+ADMIN_PASS="${MALL_ADMIN_PASS:-e2e-local-only-changeit}"
 OUTDIR="${E2E_JUNIT_DIR:-test-results}"
 mkdir -p "$OUTDIR"
 OUT="$OUTDIR/functional-junit.xml"
@@ -66,6 +73,15 @@ elif grep -q '"code"[[:space:]]*:[[:space:]]*401' "$BODY"; then
 else
   record "brand_list_unauthorized" 0 "http=${sc} $(head -c 180 "$BODY")"
 fi
+
+echo "==> bootstrap: provisioning e2e admin account (best effort, idempotent)"
+register_json=$(printf '{"username":"%s","password":"%s","nickName":"e2e","email":"e2e-admin@example.com"}' "$ADMIN_USER" "$ADMIN_PASS")
+# Registration is best-effort: on a fresh DB it creates the account; on a
+# reused DB the username already exists and the API returns a failure body,
+# which is fine here since the account was created by an earlier run with
+# the same env-supplied password. Either way, do not fail the gate on this
+# step's HTTP status.
+code_of -H "Content-Type: application/json" -d "$register_json" "${BASE}/admin/register" >/dev/null || true
 
 login_json=$(printf '{"username":"%s","password":"%s"}' "$ADMIN_USER" "$ADMIN_PASS")
 sc=$(code_of -H "Content-Type: application/json" -d "$login_json" "${BASE}/admin/login")

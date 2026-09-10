@@ -58,7 +58,13 @@ public class AlipayController {
         Map<String, String> params = new HashMap<>();
         Map<String, String[]> requestParams = request.getParameterMap();
         for (String name : requestParams.keySet()) {
-            params.put(name, request.getParameter(name));
+            // 仅收集非空的参数值；trade_status/out_trade_no等业务字段在
+            // AlipayServiceImpl#notify中通过AlipaySignature.rsaCheckV1对本map
+            // 做签名校验后才会被信任使用，避免未经验证的参数被下游消费
+            String value = request.getParameter(name);
+            if (name != null && value != null) {
+                params.put(name, value);
+            }
         }
         return alipayService.notify(params);
     }
