@@ -86,8 +86,8 @@
 				"header": [
 					{
 						"key": "Authorization",
-						"value": "Bearer eyJhbGciOiJIUzUxMiJ9.eyJzdWIiOiJhZG1pbiIsImNyZWF0ZWQiOjE1Mzg5OTExNzkwODAsImV4cCI6MTUzOTU5NTk3OX0.u_fUHf09ONw6CCQW0ERufOgfuGUY1g7hu-o9thMl6wsFlBlkn1QmOZJwlU1ejsc65-N3p3k1pb11vTeqrVnYIw",
-						"description": ""
+						"value": "Bearer {{admin.token}}",
+						"description": "SECRET REMOVED: original hardcoded JWT was committed to git history and must be treated as compromised/rotated; use the {{admin.token}} collection variable populated from a real login response instead."
 					}
 				],
 				"body": {},
@@ -103,8 +103,8 @@
 				"header": [
 					{
 						"key": "Authorization",
-						"value": "Bearer eyJhbGciOiJIUzUxMiJ9.eyJzdWIiOiJhZG1pbiIsImNyZWF0ZWQiOjE1Mzg5OTExNzkwODAsImV4cCI6MTUzOTU5NTk3OX0.u_fUHf09ONw6CCQW0ERufOgfuGUY1g7hu-o9thMl6wsFlBlkn1QmOZJwlU1ejsc65-N3p3k1pb11vTeqrVnYIw",
-						"description": ""
+						"value": "Bearer {{admin.token}}",
+						"description": "SECRET REMOVED: original hardcoded JWT was committed to git history and must be treated as compromised/rotated; use the {{admin.token}} collection variable populated from a real login response instead."
 					},
 					{
 						"key": "Content-Type",
@@ -141,8 +141,8 @@
 				"header": [
 					{
 						"key": "Authorization",
-						"value": "Bearer eyJhbGciOiJIUzUxMiJ9.eyJzdWIiOiJhZG1pbiIsImNyZWF0ZWQiOjE1Mzg5OTExNzkwODAsImV4cCI6MTUzOTU5NTk3OX0.u_fUHf09ONw6CCQW0ERufOgfuGUY1g7hu-o9thMl6wsFlBlkn1QmOZJwlU1ejsc65-N3p3k1pb11vTeqrVnYIw",
-						"description": ""
+						"value": "Bearer {{admin.token}}",
+						"description": "SECRET REMOVED: original hardcoded JWT was committed to git history and must be treated as compromised/rotated; use the {{admin.token}} collection variable populated from a real login response instead."
 					}
 				],
 				"body": {},
@@ -158,8 +158,8 @@
 				"header": [
 					{
 						"key": "Authorization",
-						"value": "Bearer eyJhbGciOiJIUzUxMiJ9.eyJzdWIiOiJhZG1pbiIsImNyZWF0ZWQiOjE1Mzg5OTExNzkwODAsImV4cCI6MTUzOTU5NTk3OX0.u_fUHf09ONw6CCQW0ERufOgfuGUY1g7hu-o9thMl6wsFlBlkn1QmOZJwlU1ejsc65-N3p3k1pb11vTeqrVnYIw",
-						"description": ""
+						"value": "Bearer {{admin.token}}",
+						"description": "SECRET REMOVED: original hardcoded JWT was committed to git history and must be treated as compromised/rotated; use the {{admin.token}} collection variable populated from a real login response instead."
 					}
 				],
 				"body": {},
@@ -175,8 +175,8 @@
 				"header": [
 					{
 						"key": "Authorization",
-						"value": "Bearer eyJhbGciOiJIUzUxMiJ9.eyJzdWIiOiJhZG1pbiIsImNyZWF0ZWQiOjE1NTIzNTYzNzg0NjUsImV4cCI6MTU1Mjk2MTE3OH0.cxT6ULWfA17_QOh5nAcdU8FVldrSxLC2yi3y4fiHetCCrNzBBF9k6iRN-gfFmYa1_Ptav4WjgUAspZDBQa7SsA",
-						"description": ""
+						"value": "Bearer {{admin.token}}",
+						"description": "SECRET REMOVED: original hardcoded JWT was committed to git history and must be treated as compromised/rotated; use the {{admin.token}} collection variable populated from a real login response instead."
 					}
 				],
 				"body": {},

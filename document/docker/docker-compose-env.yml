@@ -13,6 +13,12 @@ services:
       - /mydata/mysql/data:/var/lib/mysql #数据文件目录挂载
       - /mydata/mysql/conf:/etc/mysql #配置文件目录挂载
       - /mydata/mysql/log:/var/log/mysql #日志文件目录挂载
+    security_opt:
+      - no-new-privileges:true
+    read_only: true
+    tmpfs:
+      - /tmp
+      - /var/run/mysqld
   redis:
     image: redis:7
     container_name: redis
@@ -21,6 +27,11 @@ services:
       - /mydata/redis/data:/data #数据文件目录挂载
     ports:
       - 6379:6379
+    security_opt:
+      - no-new-privileges:true
+    read_only: true
+    tmpfs:
+      - /tmp
   nginx:
     image: nginx:1.22
     container_name: nginx
@@ -30,6 +41,13 @@ services:
       - /mydata/nginx/logs:/var/log/nginx #日志文件目录挂载
     ports:
       - 80:80
+    security_opt:
+      - no-new-privileges:true
+    read_only: true
+    tmpfs:
+      - /tmp
+      - /var/cache/nginx
+      - /var/run
   rabbitmq:
     image: rabbitmq:3.9.11-management
     container_name: rabbitmq
@@ -38,6 +56,11 @@ services:
     ports:
       - 5672:5672
       - 15672:15672
+    security_opt:
+      - no-new-privileges:true
+    read_only: true
+    tmpfs:
+      - /tmp
   elasticsearch:
     image: elasticsearch:7.17.3
     container_name: elasticsearch
@@ -51,6 +74,12 @@ services:
     ports:
       - 9200:9200
       - 9300:9300
+    security_opt:
+      - no-new-privileges:true
+    read_only: true
+    tmpfs:
+      - /tmp
+      - /usr/share/elasticsearch/logs
   logstash:
     image: logstash:7.17.3
     container_name: logstash
@@ -67,6 +96,13 @@ services:
       - 4561:4561
       - 4562:4562
       - 4563:4563
+    security_opt:
+      - no-new-privileges:true
+    read_only: true
+    tmpfs:
+      - /tmp
+      - /usr/share/logstash/data
+      - /usr/share/logstash/logs
   kibana:
     image: kibana:7.17.3
     container_name: kibana
@@ -78,6 +114,12 @@ services:
       - "elasticsearch.hosts=http://es:9200" #设置访问elasticsearch的地址
     ports:
       - 5601:5601
+    security_opt:
+      - no-new-privileges:true
+    read_only: true
+    tmpfs:
+      - /tmp
+      - /usr/share/kibana/data
   mongo:
     image: mongo:4
     container_name: mongo
@@ -85,6 +127,11 @@ services:
       - /mydata/mongo/db:/data/db #数据文件目录挂载
     ports:
       - 27017:27017
+    security_opt:
+      - no-new-privileges:true
+    read_only: true
+    tmpfs:
+      - /tmp
   minio:
     image: minio/minio
     container_name: minio
@@ -97,3 +144,9 @@ services:
     ports:
       - 9090:9000
       - 9001:9001
+    security_opt:
+      - no-new-privileges:true
+    read_only: true
+    tmpfs:
+      - /tmp
+      - /root/.minio
