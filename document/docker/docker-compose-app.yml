@@ -12,6 +12,11 @@ services:
       - 'TZ="Asia/Shanghai"'
     external_links:
       - mysql:db #可以用db这个域名访问mysql服务
+    security_opt:
+      - no-new-privileges:true
+    read_only: true
+    tmpfs:
+      - /tmp
   mall-search:
     image: mall/mall-search:1.0-SNAPSHOT
     container_name: mall-search
@@ -25,6 +30,11 @@ services:
     external_links:
       - elasticsearch:es #可以用es这个域名访问elasticsearch服务
       - mysql:db #可以用db这个域名访问mysql服务
+    security_opt:
+      - no-new-privileges:true
+    read_only: true
+    tmpfs:
+      - /tmp
   mall-portal:
     image: mall/mall-portal:1.0-SNAPSHOT
     container_name: mall-portal
@@ -40,3 +50,8 @@ services:
       - mongo:mongo #可以用mongo这个域名访问mongo服务
       - mysql:db #可以用db这个域名访问mysql服务
       - rabbitmq:rabbit #可以用rabbit这个域名访问rabbitmq服务
+    security_opt:
+      - no-new-privileges:true
+    read_only: true
+    tmpfs:
+      - /tmp
