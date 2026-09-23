@@ -18,6 +18,7 @@ import org.springframework.stereotype.Service;
 import jakarta.servlet.http.HttpServletRequest;
 import java.text.SimpleDateFormat;
 import java.util.Date;
+import java.util.regex.Pattern;
 
 /**
  * Oss对象存储管理Service实现类
@@ -42,6 +43,42 @@ public class OssServiceImpl implements OssService {
 
 	@Autowired
 	private OSSClient ossClient;
+
+	// 允许的文件名字符：字母、数字、下划线、中划线、点、斜杠，且不允许出现路径穿越序列
+	private static final Pattern FILENAME_PATTERN = Pattern.compile("^[A-Za-z0-9_\\-./]+$");
+	// 允许的mimeType格式：type/subtype
+	private static final Pattern MIME_TYPE_PATTERN = Pattern.compile("^[A-Za-z0-9!#$&\\-^_.+]+/[A-Za-z0-9!#$&\\-^_.+]+$");
+	// 允许的数字型参数格式：纯数字
+	private static final Pattern NUMERIC_PATTERN = Pattern.compile("^\\d+$");
+
+	/**
+	 * 校验OSS回调中的文件名，防止路径穿越等非法输入
+	 */
+	private static boolean isValidFilename(String filename) {
+		return filename != null
+				&& !filename.isEmpty()
+				&& filename.length() <= 255
+				&& !filename.contains("..")
+				&& FILENAME_PATTERN.matcher(filename).matches();
+	}
+
+	/**
+	 * 校验OSS回调中的mimeType参数
+	 */
+	private static boolean isValidMimeType(String mimeType) {
+		return mimeType != null
+				&& mimeType.length() <= 100
+				&& MIME_TYPE_PATTERN.matcher(mimeType).matches();
+	}
+
+	/**
+	 * 校验OSS回调中的数字型参数（size、width、height）
+	 */
+	private static boolean isValidNumeric(String value) {
+		return value != null
+				&& value.length() <= 20
+				&& NUMERIC_PATTERN.matcher(value).matches();
+	}
 
 	/**
 	 * 签名生成
@@ -90,12 +127,24 @@ public class OssServiceImpl implements OssService {
 	public OssCallbackResult callback(HttpServletRequest request) {
 		OssCallbackResult result= new OssCallbackResult();
 		String filename = request.getParameter("filename");
+		if (!isValidFilename(filename)) {
+			LOGGER.warn("OSS回调filename参数非法：{}", filename);
+			filename = "";
+		}
 		filename = "http://".concat(ALIYUN_OSS_BUCKET_NAME).concat(".").concat(ALIYUN_OSS_ENDPOINT).concat("/").concat(filename);
 		result.setFilename(filename);
-		result.setSize(request.getParameter("size"));
-		result.setMimeType(request.getParameter("mimeType"));
-		result.setWidth(request.getParameter("width"));
-		result.setHeight(request.getParameter("height"));
+
+		String size = request.getParameter("size");
+		result.setSize(isValidNumeric(size) ? size : null);
+
+		String mimeType = request.getParameter("mimeType");
+		result.setMimeType(isValidMimeType(mimeType) ? mimeType : null);
+
+		String width = request.getParameter("width");
+		result.setWidth(isValidNumeric(width) ? width : null);
+
+		String height = request.getParameter("height");
+		result.setHeight(isValidNumeric(height) ? height : null);
 		return result;
 	}
 
