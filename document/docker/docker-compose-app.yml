@@ -14,6 +14,9 @@ services:
       - mysql:db #可以用db这个域名访问mysql服务
     security_opt:
       - no-new-privileges:true
+    read_only: true
+    tmpfs:
+      - /tmp
   mall-search:
     image: mall/mall-search:1.0-SNAPSHOT
     container_name: mall-search
@@ -29,6 +32,9 @@ services:
       - mysql:db #可以用db这个域名访问mysql服务
     security_opt:
       - no-new-privileges:true
+    read_only: true
+    tmpfs:
+      - /tmp
   mall-portal:
     image: mall/mall-portal:1.0-SNAPSHOT
     container_name: mall-portal
@@ -46,3 +52,6 @@ services:
       - rabbitmq:rabbit #可以用rabbit这个域名访问rabbitmq服务
     security_opt:
       - no-new-privileges:true
+    read_only: true
+    tmpfs:
+      - /tmp
