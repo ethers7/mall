@@ -18,7 +18,9 @@ import java.io.IOException;
 public class RestAuthenticationEntryPoint implements AuthenticationEntryPoint {
     @Override
     public void commence(HttpServletRequest request, HttpServletResponse response, AuthenticationException authException) throws IOException {
-        response.setHeader("Access-Control-Allow-Origin", "*");
+        // CORS headers are handled centrally by the application's CorsFilter
+        // (see GlobalCorsConfig in mall-admin/mall-portal), which enforces the
+        // proper allowlist-based origin policy for all responses, including this one.
         response.setHeader("Cache-Control","no-cache");
         response.setCharacterEncoding("UTF-8");
         response.setContentType("application/json");
