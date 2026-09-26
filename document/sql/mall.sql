@@ -2169,7 +2169,7 @@ CREATE TABLE `ums_admin`  (
 
 -- ----------------------------
 -- Records of ums_admin
--- SECURITY: password hashes below are placeholders ('$2a$10$INVALID.PLACEHOLDER...'),
+-- SECURITY: password hashes below are placeholders ('NO_LOGIN_CREDENTIAL_REMOVED_FOR_SECURITY_0000000000000000'),
 -- not real bcrypt hashes — the original hashes were committed credential material
 -- (CWE-798) and have been invalidated so no known/demo password can authenticate.
 -- The original hashes remain in this repo's git history and MUST be treated as
@@ -2177,14 +2177,14 @@ CREATE TABLE `ums_admin`  (
 -- deployment should have its password reset. Set a real bcrypt hash (e.g. via an
 -- env-supplied credential at import/seed time) before using this dump to log in.
 -- ----------------------------
-INSERT INTO `ums_admin` VALUES (1, 'test', '$2a$10$INVALID.PLACEHOLDER.CHANGE.ME.00000000000000000000000', 'https://macro-oss.oss-cn-shenzhen.aliyuncs.com/mall/icon/github_icon_02.png', 'test@qq.com', '测试账号', NULL, '2018-09-29 13:55:30', '2018-09-29 13:55:39', 1);
-INSERT INTO `ums_admin` VALUES (3, 'admin', '$2a$10$INVALID.PLACEHOLDER.CHANGE.ME.00000000000000000000000', 'https://macro-oss.oss-cn-shenzhen.aliyuncs.com/mall/icon/github_icon_01.png', 'admin@163.com', '系统管理员', '系统管理员', '2018-10-08 13:32:47', '2019-04-20 12:45:16', 1);
-INSERT INTO `ums_admin` VALUES (4, 'macro', '$2a$10$INVALID.PLACEHOLDER.CHANGE.ME.00000000000000000000000', 'https://macro-oss.oss-cn-shenzhen.aliyuncs.com/mall/icon/github_icon_01.png', 'macro@qq.com', 'macro', 'macro专用', '2019-10-06 15:53:51', '2020-02-03 14:55:55', 1);
-INSERT INTO `ums_admin` VALUES (6, 'productAdmin', '$2a$10$INVALID.PLACEHOLDER.CHANGE.ME.00000000000000000000000', 'https://macro-oss.oss-cn-shenzhen.aliyuncs.com/mall/icon/github_icon_03.png', 'product@qq.com', '商品管理员', '只有商品权限', '2020-02-07 16:15:08', NULL, 1);
-INSERT INTO `ums_admin` VALUES (7, 'orderAdmin', '$2a$10$INVALID.PLACEHOLDER.CHANGE.ME.00000000000000000000000', 'https://macro-oss.oss-cn-shenzhen.aliyuncs.com/mall/icon/github_icon_04.png', 'order@qq.com', '订单管理员', '只有订单管理权限', '2020-02-07 16:15:50', NULL, 1);
-INSERT INTO `ums_admin` VALUES (8, 'test123', '$2a$10$INVALID.PLACEHOLDER.CHANGE.ME.00000000000000000000000', 'string', 'abc@qq.com', 'string', 'string', '2022-08-07 14:45:42', NULL, 1);
-INSERT INTO `ums_admin` VALUES (9, 'test256', '$2a$10$INVALID.PLACEHOLDER.CHANGE.ME.00000000000000000000000', 'string', 'abc@qq.com', 'string', 'string', '2022-08-07 14:52:57', NULL, 1);
-INSERT INTO `ums_admin` VALUES (10, 'test1267', '$2a$10$INVALID.PLACEHOLDER.CHANGE.ME.00000000000000000000000', NULL, 'test1267@qq.com', 'test1267', 'test1267', '2023-01-04 16:13:34', NULL, 1);
+INSERT INTO `ums_admin` VALUES (1, 'test', 'NO_LOGIN_CREDENTIAL_REMOVED_FOR_SECURITY_0000000000000000', 'https://macro-oss.oss-cn-shenzhen.aliyuncs.com/mall/icon/github_icon_02.png', 'test@qq.com', '测试账号', NULL, '2018-09-29 13:55:30', '2018-09-29 13:55:39', 1);
+INSERT INTO `ums_admin` VALUES (3, 'admin', 'NO_LOGIN_CREDENTIAL_REMOVED_FOR_SECURITY_0000000000000000', 'https://macro-oss.oss-cn-shenzhen.aliyuncs.com/mall/icon/github_icon_01.png', 'admin@163.com', '系统管理员', '系统管理员', '2018-10-08 13:32:47', '2019-04-20 12:45:16', 1);
+INSERT INTO `ums_admin` VALUES (4, 'macro', 'NO_LOGIN_CREDENTIAL_REMOVED_FOR_SECURITY_0000000000000000', 'https://macro-oss.oss-cn-shenzhen.aliyuncs.com/mall/icon/github_icon_01.png', 'macro@qq.com', 'macro', 'macro专用', '2019-10-06 15:53:51', '2020-02-03 14:55:55', 1);
+INSERT INTO `ums_admin` VALUES (6, 'productAdmin', 'NO_LOGIN_CREDENTIAL_REMOVED_FOR_SECURITY_0000000000000000', 'https://macro-oss.oss-cn-shenzhen.aliyuncs.com/mall/icon/github_icon_03.png', 'product@qq.com', '商品管理员', '只有商品权限', '2020-02-07 16:15:08', NULL, 1);
+INSERT INTO `ums_admin` VALUES (7, 'orderAdmin', 'NO_LOGIN_CREDENTIAL_REMOVED_FOR_SECURITY_0000000000000000', 'https://macro-oss.oss-cn-shenzhen.aliyuncs.com/mall/icon/github_icon_04.png', 'order@qq.com', '订单管理员', '只有订单管理权限', '2020-02-07 16:15:50', NULL, 1);
+INSERT INTO `ums_admin` VALUES (8, 'test123', 'NO_LOGIN_CREDENTIAL_REMOVED_FOR_SECURITY_0000000000000000', 'string', 'abc@qq.com', 'string', 'string', '2022-08-07 14:45:42', NULL, 1);
+INSERT INTO `ums_admin` VALUES (9, 'test256', 'NO_LOGIN_CREDENTIAL_REMOVED_FOR_SECURITY_0000000000000000', 'string', 'abc@qq.com', 'string', 'string', '2022-08-07 14:52:57', NULL, 1);
+INSERT INTO `ums_admin` VALUES (10, 'test1267', 'NO_LOGIN_CREDENTIAL_REMOVED_FOR_SECURITY_0000000000000000', NULL, 'test1267@qq.com', 'test1267', 'test1267', '2023-01-04 16:13:34', NULL, 1);
 
 -- ----------------------------
 -- Table structure for ums_admin_login_log
@@ -2748,16 +2748,16 @@ CREATE TABLE `ums_member`  (
 -- compromised via git history; do not rely on any documented demo password
 -- (e.g. README/e2e "macro123"/"123456") working against this seed data.
 -- ----------------------------
-INSERT INTO `ums_member` VALUES (1, 4, 'test', '$2a$10$INVALID.PLACEHOLDER.CHANGE.ME.00000000000000000000000', 'test', '18061581849', 1, '2018-08-02 10:35:44', 'https://macro-oss.oss-cn-shenzhen.aliyuncs.com/mall/icon/github_icon_03.png', 1, '2009-06-01', '上海', '学生', 'test', NULL, 3900, 1000, NULL, NULL);
-INSERT INTO `ums_member` VALUES (3, 4, 'windy', '$2a$10$INVALID.PLACEHOLDER.CHANGE.ME.00000000000000000000000', 'windy', '18061581848', 1, '2018-08-03 16:46:38', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL);
-INSERT INTO `ums_member` VALUES (4, 4, 'zhengsan', '$2a$10$INVALID.PLACEHOLDER.CHANGE.ME.00000000000000000000000', 'zhengsan', '18061581847', 1, '2018-11-12 14:12:04', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL);
-INSERT INTO `ums_member` VALUES (5, 4, 'lisi', '$2a$10$INVALID.PLACEHOLDER.CHANGE.ME.00000000000000000000000', 'lisi', '18061581841', 1, '2018-11-12 14:12:38', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL);
-INSERT INTO `ums_member` VALUES (6, 4, 'wangwu', '$2a$10$INVALID.PLACEHOLDER.CHANGE.ME.00000000000000000000000', 'wangwu', '18061581842', 1, '2018-11-12 14:13:09', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL);
-INSERT INTO `ums_member` VALUES (7, 4, 'lion', '$2a$10$INVALID.PLACEHOLDER.CHANGE.ME.00000000000000000000000', 'lion', '18061581845', 1, '2018-11-12 14:21:39', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL);
-INSERT INTO `ums_member` VALUES (8, 4, 'shari', '$2a$10$INVALID.PLACEHOLDER.CHANGE.ME.00000000000000000000000', 'shari', '18061581844', 1, '2018-11-12 14:22:00', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL);
-INSERT INTO `ums_member` VALUES (9, 4, 'aewen', '$2a$10$INVALID.PLACEHOLDER.CHANGE.ME.00000000000000000000000', 'aewen', '18061581843', 1, '2018-11-12 14:22:55', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL);
-INSERT INTO `ums_member` VALUES (10, 4, 'guest', '$2a$10$INVALID.PLACEHOLDER.CHANGE.ME.00000000000000000000000', NULL, '18911111111', 1, '2020-03-14 14:52:18', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL);
-INSERT INTO `ums_member` VALUES (11, 4, 'member', '$2a$10$INVALID.PLACEHOLDER.CHANGE.ME.00000000000000000000000', 'member', '18961511111', 1, '2023-05-11 15:22:38', 'https://macro-oss.oss-cn-shenzhen.aliyuncs.com/mall/icon/github_icon_02.png', 1, '2009-06-01', '上海', '学生', 'member', NULL, 5000, 1000, NULL, NULL);
+INSERT INTO `ums_member` VALUES (1, 4, 'test', 'NO_LOGIN_CREDENTIAL_REMOVED_FOR_SECURITY_0000000000000000', 'test', '18061581849', 1, '2018-08-02 10:35:44', 'https://macro-oss.oss-cn-shenzhen.aliyuncs.com/mall/icon/github_icon_03.png', 1, '2009-06-01', '上海', '学生', 'test', NULL, 3900, 1000, NULL, NULL);
+INSERT INTO `ums_member` VALUES (3, 4, 'windy', 'NO_LOGIN_CREDENTIAL_REMOVED_FOR_SECURITY_0000000000000000', 'windy', '18061581848', 1, '2018-08-03 16:46:38', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL);
+INSERT INTO `ums_member` VALUES (4, 4, 'zhengsan', 'NO_LOGIN_CREDENTIAL_REMOVED_FOR_SECURITY_0000000000000000', 'zhengsan', '18061581847', 1, '2018-11-12 14:12:04', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL);
+INSERT INTO `ums_member` VALUES (5, 4, 'lisi', 'NO_LOGIN_CREDENTIAL_REMOVED_FOR_SECURITY_0000000000000000', 'lisi', '18061581841', 1, '2018-11-12 14:12:38', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL);
+INSERT INTO `ums_member` VALUES (6, 4, 'wangwu', 'NO_LOGIN_CREDENTIAL_REMOVED_FOR_SECURITY_0000000000000000', 'wangwu', '18061581842', 1, '2018-11-12 14:13:09', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL);
+INSERT INTO `ums_member` VALUES (7, 4, 'lion', 'NO_LOGIN_CREDENTIAL_REMOVED_FOR_SECURITY_0000000000000000', 'lion', '18061581845', 1, '2018-11-12 14:21:39', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL);
+INSERT INTO `ums_member` VALUES (8, 4, 'shari', 'NO_LOGIN_CREDENTIAL_REMOVED_FOR_SECURITY_0000000000000000', 'shari', '18061581844', 1, '2018-11-12 14:22:00', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL);
+INSERT INTO `ums_member` VALUES (9, 4, 'aewen', 'NO_LOGIN_CREDENTIAL_REMOVED_FOR_SECURITY_0000000000000000', 'aewen', '18061581843', 1, '2018-11-12 14:22:55', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL);
+INSERT INTO `ums_member` VALUES (10, 4, 'guest', 'NO_LOGIN_CREDENTIAL_REMOVED_FOR_SECURITY_0000000000000000', NULL, '18911111111', 1, '2020-03-14 14:52:18', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL);
+INSERT INTO `ums_member` VALUES (11, 4, 'member', 'NO_LOGIN_CREDENTIAL_REMOVED_FOR_SECURITY_0000000000000000', 'member', '18961511111', 1, '2023-05-11 15:22:38', 'https://macro-oss.oss-cn-shenzhen.aliyuncs.com/mall/icon/github_icon_02.png', 1, '2009-06-01', '上海', '学生', 'member', NULL, 5000, 1000, NULL, NULL);
 
 -- ----------------------------
 -- Table structure for ums_member_level
