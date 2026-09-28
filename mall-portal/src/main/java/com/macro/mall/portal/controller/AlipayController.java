@@ -58,7 +58,11 @@ public class AlipayController {
         Map<String, String> params = new HashMap<>();
         Map<String, String[]> requestParams = request.getParameterMap();
         for (String name : requestParams.keySet()) {
-            params.put(name, request.getParameter(name));
+            String value = request.getParameter(name);
+            // 仅收集有值的参数，避免向后续签名校验流程传入空值
+            if (value != null) {
+                params.put(name, value);
+            }
         }
         return alipayService.notify(params);
     }
