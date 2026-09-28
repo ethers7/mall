@@ -13,10 +13,10 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
+import java.security.SecureRandom;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
-import java.util.Random;
 import java.util.stream.Collectors;
 
 /**
@@ -87,8 +87,9 @@ public class UmsMemberCouponServiceImpl implements UmsMemberCouponService {
         Long currentTimeMillis = System.currentTimeMillis();
         String timeMillisStr = currentTimeMillis.toString();
         sb.append(timeMillisStr.substring(timeMillisStr.length() - 8));
+        SecureRandom secureRandom = new SecureRandom();
         for (int i = 0; i < 4; i++) {
-            sb.append(new Random().nextInt(10));
+            sb.append(secureRandom.nextInt(10));
         }
         String memberIdStr = memberId.toString();
         if (memberIdStr.length() <= 4) {
