@@ -29,6 +29,11 @@ public class RedisServiceImpl implements RedisService {
 
     @Override
     public Object get(String key) {
+        // Validate key to prevent unauthorized access to arbitrary Redis keys
+        if (key == null || key.isEmpty() || key.contains("*") || key.contains("?")
+                || key.contains("[") || key.contains("]")) {
+            return null;
+        }
         return redisTemplate.opsForValue().get(key);
     }
 

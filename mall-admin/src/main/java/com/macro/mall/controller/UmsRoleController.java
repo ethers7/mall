@@ -7,6 +7,7 @@ import com.macro.mall.service.UmsRoleService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.*;
 
@@ -26,6 +27,7 @@ public class UmsRoleController {
     @Operation(summary = "添加角色")
     @RequestMapping(value = "/create", method = RequestMethod.POST)
     @ResponseBody
+    @PreAuthorize("isAuthenticated()")
     public CommonResult create(@RequestBody UmsRole role) {
         int count = roleService.create(role);
         if (count > 0) {
@@ -106,6 +108,7 @@ public class UmsRoleController {
     @Operation(summary = "给角色分配菜单")
     @RequestMapping(value = "/allocMenu", method = RequestMethod.POST)
     @ResponseBody
+    @PreAuthorize("isAuthenticated()")
     public CommonResult allocMenu(@RequestParam Long roleId, @RequestParam List<Long> menuIds) {
         int count = roleService.allocMenu(roleId, menuIds);
         return CommonResult.success(count);

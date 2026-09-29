@@ -6,6 +6,7 @@ import com.macro.mall.service.UmsResourceCategoryService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.*;
 
@@ -33,6 +34,7 @@ public class UmsResourceCategoryController {
     @Operation(summary = "添加后台资源分类")
     @RequestMapping(value = "/create", method = RequestMethod.POST)
     @ResponseBody
+    @PreAuthorize("isAuthenticated()")
     public CommonResult create(@RequestBody UmsResourceCategory umsResourceCategory) {
         int count = resourceCategoryService.create(umsResourceCategory);
         if (count > 0) {

@@ -56,6 +56,9 @@ public class EsProductServiceImpl implements EsProductService {
 
     @Override
     public void delete(Long id) {
+        if (id == null || id <= 0) {
+            return;
+        }
         productRepository.deleteById(id);
     }
 
@@ -75,18 +78,31 @@ public class EsProductServiceImpl implements EsProductService {
         if (!CollectionUtils.isEmpty(ids)) {
             List<EsProduct> esProductList = new ArrayList<>();
             for (Long id : ids) {
-                EsProduct esProduct = new EsProduct();
-                esProduct.setId(id);
-                esProductList.add(esProduct);
+                // Validate each ID before processing
+                if (id != null && id > 0) {
+                    EsProduct esProduct = new EsProduct();
+                    esProduct.setId(id);
+                    esProductList.add(esProduct);
+                }
             }
-            productRepository.deleteAll(esProductList);
+            if (!esProductList.isEmpty()) {
+                productRepository.deleteAll(esProductList);
+            }
         }
     }
 
     @Override
     public Page<EsProduct> search(String keyword, Integer pageNum, Integer pageSize) {
-        Pageable pageable = PageRequest.of(pageNum, pageSize);
-        return productRepository.findByNameOrSubTitleOrKeywords(keyword, keyword, keyword, pageable);
+        // Validate pagination parameters
+        int validPageNum = Math.max(0, pageNum);
+        int validPageSize = Math.max(1, Math.min(pageSize, 100));
+        // Limit keyword length to prevent abuse
+        String validKeyword = keyword;
+        if (validKeyword != null && validKeyword.length() > 200) {
+            validKeyword = validKeyword.substring(0, 200);
+        }
+        Pageable pageable = PageRequest.of(validPageNum, validPageSize);
+        return productRepository.findByNameOrSubTitleOrKeywords(validKeyword, validKeyword, validKeyword, pageable);
     }
 
     @Override

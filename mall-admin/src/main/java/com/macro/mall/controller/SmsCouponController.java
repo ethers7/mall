@@ -8,6 +8,7 @@ import com.macro.mall.service.SmsCouponService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.*;
 
@@ -26,6 +27,7 @@ public class SmsCouponController {
     @Operation(summary = "添加优惠券")
     @RequestMapping(value = "/create", method = RequestMethod.POST)
     @ResponseBody
+    @PreAuthorize("isAuthenticated()")
     public CommonResult add(@RequestBody SmsCouponParam couponParam) {
         int count = couponService.create(couponParam);
         if(count>0){

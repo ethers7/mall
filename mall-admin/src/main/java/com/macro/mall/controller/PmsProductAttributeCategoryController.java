@@ -8,6 +8,7 @@ import com.macro.mall.service.PmsProductAttributeCategoryService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.*;
 
@@ -27,6 +28,7 @@ public class PmsProductAttributeCategoryController {
     @Operation(summary = "添加商品属性分类")
     @RequestMapping(value = "/create", method = RequestMethod.POST)
     @ResponseBody
+    @PreAuthorize("isAuthenticated()")
     public CommonResult create(@RequestParam String name) {
         int count = productAttributeCategoryService.create(name);
         if (count > 0) {

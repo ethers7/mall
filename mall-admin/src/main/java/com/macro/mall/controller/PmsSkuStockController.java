@@ -6,6 +6,7 @@ import com.macro.mall.service.PmsSkuStockService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.*;
 
@@ -25,6 +26,7 @@ public class PmsSkuStockController {
     @Operation(summary = "根据商品ID及sku编码模糊搜索sku库存")
     @RequestMapping(value = "/{pid}", method = RequestMethod.GET)
     @ResponseBody
+    @PreAuthorize("isAuthenticated()")
     public CommonResult<List<PmsSkuStock>> getList(@PathVariable Long pid, @RequestParam(value = "keyword",required = false) String keyword) {
         List<PmsSkuStock> skuStockList = skuStockService.getList(pid, keyword);
         return CommonResult.success(skuStockList);

@@ -7,6 +7,7 @@ import com.macro.mall.service.SmsFlashPromotionService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.*;
 
@@ -26,6 +27,7 @@ public class SmsFlashPromotionController {
     @Operation(summary = "添加活动")
     @RequestMapping(value = "/create", method = RequestMethod.POST)
     @ResponseBody
+    @PreAuthorize("isAuthenticated()")
     public CommonResult create(@RequestBody SmsFlashPromotion flashPromotion) {
         int count = flashPromotionService.create(flashPromotion);
         if (count > 0) {

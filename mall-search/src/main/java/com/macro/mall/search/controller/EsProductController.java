@@ -12,6 +12,7 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.*;
 
@@ -55,6 +56,7 @@ public class EsProductController {
     @Operation(summary = "根据id创建商品")
     @RequestMapping(value = "/create/{id}", method = RequestMethod.POST)
     @ResponseBody
+    @PreAuthorize("isAuthenticated()")
     public CommonResult<EsProduct> create(@PathVariable Long id) {
         EsProduct esProduct = esProductService.create(id);
         if (esProduct != null) {

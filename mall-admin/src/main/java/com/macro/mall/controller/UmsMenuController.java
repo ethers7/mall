@@ -8,6 +8,7 @@ import com.macro.mall.service.UmsMenuService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.*;
 
@@ -28,6 +29,7 @@ public class UmsMenuController {
     @Operation(summary = "添加后台菜单")
     @RequestMapping(value = "/create", method = RequestMethod.POST)
     @ResponseBody
+    @PreAuthorize("isAuthenticated()")
     public CommonResult create(@RequestBody UmsMenu umsMenu) {
         int count = menuService.create(umsMenu);
         if (count > 0) {
@@ -91,6 +93,7 @@ public class UmsMenuController {
     @Operation(summary = "修改菜单显示状态")
     @RequestMapping(value = "/updateHidden/{id}", method = RequestMethod.POST)
     @ResponseBody
+    @PreAuthorize("isAuthenticated()")
     public CommonResult updateHidden(@PathVariable Long id, @RequestParam("hidden") Integer hidden) {
         int count = menuService.updateHidden(id, hidden);
         if (count > 0) {
