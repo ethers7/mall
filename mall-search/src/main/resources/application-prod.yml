@@ -11,7 +11,7 @@ spring:
         exclusions: "*.js,*.gif,*.jpg,*.png,*.css,*.ico,/druid/*" #不统计这些请求数据
       stat-view-servlet: #访问监控网页的登录用户名和密码
         login-username: druid
-        login-password: druid
+        login-password: ${DRUID_LOGIN_PASSWORD:} # Rotate: credential was in git history
   data:
     elasticsearch:
       repositories:
