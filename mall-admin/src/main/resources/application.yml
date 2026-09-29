@@ -18,7 +18,7 @@ mybatis:
 
 jwt:
   tokenHeader: Authorization #JWT存储的请求头
-  secret: mall-admin-secret #JWT加解密使用的密钥
+  secret: ${JWT_SECRET:changeme} #JWT加解密使用的密钥 # Credential must be rotated — was committed to version control
   expiration: 604800 #JWT的超期限时间(60*60*24*7)
   tokenHead: 'Bearer '  #JWT负载中拿到开头
 
@@ -71,7 +71,7 @@ aliyun:
   oss:
     endpoint: oss-cn-shenzhen.aliyuncs.com # oss对外服务的访问域名
     accessKeyId: test # 访问身份验证中用到用户标识
-    accessKeySecret: test # 用户用于加密签名字符串和oss用来验证签名字符串的密钥
+    accessKeySecret: ${ALIYUN_OSS_ACCESS_KEY_SECRET:changeme} # 用户用于加密签名字符串和oss用来验证签名字符串的密钥 # Credential must be rotated
     bucketName: macro-oss # oss的存储空间
     policy:
       expire: 300 # 签名有效期(S)
