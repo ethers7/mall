@@ -12,9 +12,12 @@ mybatis:
     - classpath:dao/*.xml
     - classpath*:com/**/mapper/*.xml
 
+cors:
+  allowedOrigins: ${CORS_ALLOWED_ORIGINS:http://localhost:8090}
+
 jwt:
   tokenHeader: Authorization #JWT存储的请求头
-  secret: mall-portal-secret #JWT加解密使用的密钥
+  secret: ${JWT_SECRET:} #JWT加解密使用的密钥 # Rotate: credential was in git history
   expiration: 604800 #JWT的超期限时间(60*60*24*7)
   tokenHead: 'Bearer '  #JWT负载中拿到开头
 

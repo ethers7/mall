@@ -6,6 +6,7 @@ import com.macro.mall.portal.service.OmsPortalOrderReturnApplyService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -26,6 +27,7 @@ public class OmsPortalOrderReturnApplyController {
     @Operation(summary = "申请退货")
     @RequestMapping(value = "/create", method = RequestMethod.POST)
     @ResponseBody
+    @PreAuthorize("isAuthenticated()")
     public CommonResult create(@RequestBody OmsOrderReturnApplyParam returnApply) {
         int count = returnApplyService.create(returnApply);
         if (count > 0) {

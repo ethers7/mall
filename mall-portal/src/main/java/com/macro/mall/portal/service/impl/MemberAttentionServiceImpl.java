@@ -62,19 +62,28 @@ public class MemberAttentionServiceImpl implements MemberAttentionService {
 
     @Override
     public int delete(Long brandId) {
+        if (brandId == null || brandId <= 0) {
+            return 0;
+        }
         UmsMember member = memberService.getCurrentMember();
-        return memberBrandAttentionRepository.deleteByMemberIdAndBrandId(member.getId(),brandId);
+        return memberBrandAttentionRepository.deleteByMemberIdAndBrandId(member.getId(), brandId);
     }
 
     @Override
     public Page<MemberBrandAttention> list(Integer pageNum, Integer pageSize) {
         UmsMember member = memberService.getCurrentMember();
-        Pageable pageable = PageRequest.of(pageNum-1,pageSize);
-        return memberBrandAttentionRepository.findByMemberId(member.getId(),pageable);
+        // Validate pagination parameters to prevent misuse
+        int validPageNum = Math.max(1, pageNum);
+        int validPageSize = Math.max(1, Math.min(pageSize, 100));
+        Pageable pageable = PageRequest.of(validPageNum - 1, validPageSize);
+        return memberBrandAttentionRepository.findByMemberId(member.getId(), pageable);
     }
 
     @Override
     public MemberBrandAttention detail(Long brandId) {
+        if (brandId == null || brandId <= 0) {
+            return null;
+        }
         UmsMember member = memberService.getCurrentMember();
         return memberBrandAttentionRepository.findByMemberIdAndBrandId(member.getId(), brandId);
     }

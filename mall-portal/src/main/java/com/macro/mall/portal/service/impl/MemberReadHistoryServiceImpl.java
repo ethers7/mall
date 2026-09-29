@@ -35,7 +35,7 @@ public class MemberReadHistoryServiceImpl implements MemberReadHistoryService {
     private UmsMemberService memberService;
     @Override
     public int create(MemberReadHistory memberReadHistory) {
-        if (memberReadHistory.getProductId() == null) {
+        if (memberReadHistory.getProductId() == null || memberReadHistory.getProductId() <= 0) {
             return 0;
         }
         UmsMember member = memberService.getCurrentMember();
@@ -60,21 +60,29 @@ public class MemberReadHistoryServiceImpl implements MemberReadHistoryService {
 
     @Override
     public int delete(List<String> ids) {
+        UmsMember member = memberService.getCurrentMember();
+        // Only delete records that belong to the current member to prevent IDOR
         List<MemberReadHistory> deleteList = new ArrayList<>();
-        for(String id:ids){
-            MemberReadHistory memberReadHistory = new MemberReadHistory();
-            memberReadHistory.setId(id);
-            deleteList.add(memberReadHistory);
+        for (String id : ids) {
+            MemberReadHistory record = memberReadHistoryRepository.findById(id).orElse(null);
+            if (record != null && member.getId().equals(record.getMemberId())) {
+                deleteList.add(record);
+            }
         }
-        memberReadHistoryRepository.deleteAll(deleteList);
-        return ids.size();
+        if (!deleteList.isEmpty()) {
+            memberReadHistoryRepository.deleteAll(deleteList);
+        }
+        return deleteList.size();
     }
 
     @Override
     public Page<MemberReadHistory> list(Integer pageNum, Integer pageSize) {
         UmsMember member = memberService.getCurrentMember();
-        Pageable pageable = PageRequest.of(pageNum-1, pageSize);
-        return memberReadHistoryRepository.findByMemberIdOrderByCreateTimeDesc(member.getId(),pageable);
+        // Validate pagination parameters to prevent misuse
+        int validPageNum = Math.max(1, pageNum);
+        int validPageSize = Math.max(1, Math.min(pageSize, 100));
+        Pageable pageable = PageRequest.of(validPageNum - 1, validPageSize);
+        return memberReadHistoryRepository.findByMemberIdOrderByCreateTimeDesc(member.getId(), pageable);
     }
 
     @Override

@@ -59,6 +59,9 @@ public class MemberCollectionServiceImpl implements MemberCollectionService {
 
     @Override
     public int delete(Long productId) {
+        if (productId == null || productId <= 0) {
+            return 0;
+        }
         UmsMember member = memberService.getCurrentMember();
         return productCollectionRepository.deleteByMemberIdAndProductId(member.getId(), productId);
     }
@@ -66,12 +69,18 @@ public class MemberCollectionServiceImpl implements MemberCollectionService {
     @Override
     public Page<MemberProductCollection> list(Integer pageNum, Integer pageSize) {
         UmsMember member = memberService.getCurrentMember();
-        Pageable pageable = PageRequest.of(pageNum - 1, pageSize);
+        // Validate pagination parameters to prevent misuse
+        int validPageNum = Math.max(1, pageNum);
+        int validPageSize = Math.max(1, Math.min(pageSize, 100));
+        Pageable pageable = PageRequest.of(validPageNum - 1, validPageSize);
         return productCollectionRepository.findByMemberId(member.getId(), pageable);
     }
 
     @Override
     public MemberProductCollection detail(Long productId) {
+        if (productId == null || productId <= 0) {
+            return null;
+        }
         UmsMember member = memberService.getCurrentMember();
         return productCollectionRepository.findByMemberIdAndProductId(member.getId(), productId);
     }
