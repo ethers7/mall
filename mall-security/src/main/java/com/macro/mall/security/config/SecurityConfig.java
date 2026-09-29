@@ -11,8 +11,8 @@ import org.springframework.http.HttpMethod;
 import org.springframework.security.authorization.AuthenticatedAuthorizationManager;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
-import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
 import org.springframework.security.config.http.SessionCreationPolicy;
+import org.springframework.security.web.csrf.CookieCsrfTokenRepository;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 
@@ -52,8 +52,11 @@ public class SecurityConfig {
             //有动态权限配置时添加动态权限管理器
             .access(dynamicAuthorizationManager==null? AuthenticatedAuthorizationManager.authenticated():dynamicAuthorizationManager)
         )
-        //关闭跨站请求防护
-        .csrf(AbstractHttpConfigurer::disable)
+        // Enable CSRF protection using cookie-based token repository for SPA/REST clients
+        .csrf(csrf -> {
+            csrf.csrfTokenRepository(CookieCsrfTokenRepository.withHttpOnlyFalse());
+            csrf.ignoringRequestMatchers(ignoreUrlsConfig.getUrls().toArray(new String[0]));
+        })
         //修改Session生成策略为无状态会话
         .sessionManagement(configurer -> configurer.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
         //自定义权限拒绝处理类
