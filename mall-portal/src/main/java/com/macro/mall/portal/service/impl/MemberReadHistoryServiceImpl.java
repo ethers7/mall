@@ -60,14 +60,19 @@ public class MemberReadHistoryServiceImpl implements MemberReadHistoryService {
 
     @Override
     public int delete(List<String> ids) {
-        List<MemberReadHistory> deleteList = new ArrayList<>();
-        for(String id:ids){
-            MemberReadHistory memberReadHistory = new MemberReadHistory();
-            memberReadHistory.setId(id);
-            deleteList.add(memberReadHistory);
+        UmsMember member = memberService.getCurrentMember();
+        // Fetch actual records and verify they belong to the current member
+        List<MemberReadHistory> allRecords = memberReadHistoryRepository.findAllById(ids);
+        List<MemberReadHistory> ownedRecords = new ArrayList<>();
+        for (MemberReadHistory record : allRecords) {
+            if (member.getId().equals(record.getMemberId())) {
+                ownedRecords.add(record);
+            }
         }
-        memberReadHistoryRepository.deleteAll(deleteList);
-        return ids.size();
+        if (!ownedRecords.isEmpty()) {
+            memberReadHistoryRepository.deleteAll(ownedRecords);
+        }
+        return ownedRecords.size();
     }
 
     @Override
