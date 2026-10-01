@@ -14,7 +14,7 @@ spring:
         exclusions: "*.js,*.gif,*.jpg,*.png,*.css,*.ico,/druid/*" #不统计这些请求数据
       stat-view-servlet: #访问监控网页的登录用户名和密码
         login-username: druid
-        login-password: druid
+        login-password: ${DRUID_LOGIN_PASSWORD:} # ROTATE: credential was in version control and must be revoked/reissued
   data:
     mongodb:
       host: mongo
@@ -31,7 +31,7 @@ spring:
     port: 5672
     virtual-host: /mall
     username: mall
-    password: mall
+    password: ${RABBITMQ_PASSWORD:} # ROTATE: credential was in version control and must be revoked/reissued
 
 mongo:
   insert:
@@ -51,7 +51,7 @@ alipay:
   gatewayUrl: https://openapi-sandbox.dl.alipaydev.com/gateway.do
   appId: your appId
   alipayPublicKey: your alipayPublicKey
-  appPrivateKey: your appPrivateKey
+  appPrivateKey: ${ALIPAY_APP_PRIVATE_KEY:} # ROTATE: credential was in version control and must be revoked/reissued
   returnUrl: http://192.168.3.101:8060/#/pages/money/paySuccess
   notifyUrl:
 
