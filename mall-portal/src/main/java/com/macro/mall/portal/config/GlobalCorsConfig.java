@@ -1,5 +1,6 @@
 package com.macro.mall.portal.config;
 
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.web.cors.CorsConfiguration;
@@ -13,14 +14,21 @@ import org.springframework.web.filter.CorsFilter;
 @Configuration
 public class GlobalCorsConfig {
 
+    @Value("${cors.allowed-origin-patterns:${CORS_ALLOWED_ORIGINS:}}")
+    private String allowedOriginPatterns;
+
     /**
      * 允许跨域调用的过滤器
      */
     @Bean
     public CorsFilter corsFilter() {
         CorsConfiguration config = new CorsConfiguration();
-        //允许所有域名进行跨域调用
-        config.addAllowedOriginPattern("*");
+        //允许配置的域名进行跨域调用
+        if (allowedOriginPatterns != null && !allowedOriginPatterns.isEmpty()) {
+            for (String pattern : allowedOriginPatterns.split(",")) {
+                config.addAllowedOriginPattern(pattern.trim());
+            }
+        }
         //允许跨越发送cookie
         config.setAllowCredentials(true);
         //放行全部原始头信息
