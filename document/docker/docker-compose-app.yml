@@ -6,6 +6,8 @@ services:
     read_only: true
     tmpfs:
       - /tmp
+    security_opt:
+      - no-new-privileges:true
     ports:
       - 8080:8080
     volumes:
@@ -21,6 +23,8 @@ services:
     read_only: true
     tmpfs:
       - /tmp
+    security_opt:
+      - no-new-privileges:true
     ports:
       - 8081:8081
     volumes:
@@ -37,6 +41,8 @@ services:
     read_only: true
     tmpfs:
       - /tmp
+    security_opt:
+      - no-new-privileges:true
     ports:
       - 8085:8085
     volumes:

@@ -9,6 +9,8 @@ services:
     tmpfs:
       - /var/run/mysqld
       - /tmp
+    security_opt:
+      - no-new-privileges:true
     environment:
       MYSQL_ROOT_PASSWORD: root #设置root帐号密码
     ports:
@@ -24,6 +26,8 @@ services:
     read_only: true
     tmpfs:
       - /tmp
+    security_opt:
+      - no-new-privileges:true
     volumes:
       - /mydata/redis/data:/data #数据文件目录挂载
     ports:
@@ -36,6 +40,8 @@ services:
       - /var/cache/nginx
       - /var/run
       - /tmp
+    security_opt:
+      - no-new-privileges:true
     volumes:
       - /mydata/nginx/conf:/etc/nginx #配置文件目录挂载
       - /mydata/nginx/html:/usr/share/nginx/html #静态资源根目录挂载
@@ -48,6 +54,8 @@ services:
     read_only: true
     tmpfs:
       - /tmp
+    security_opt:
+      - no-new-privileges:true
     volumes:
       - /mydata/rabbitmq/data:/var/lib/rabbitmq #数据文件目录挂载
     ports:
@@ -59,6 +67,8 @@ services:
     read_only: true
     tmpfs:
       - /tmp
+    security_opt:
+      - no-new-privileges:true
     environment:
       - "cluster.name=elasticsearch" #设置集群名称为elasticsearch
       - "discovery.type=single-node" #以单一节点模式启动
@@ -76,6 +86,8 @@ services:
     tmpfs:
       - /usr/share/logstash/data
       - /tmp
+    security_opt:
+      - no-new-privileges:true
     environment:
       - TZ=Asia/Shanghai
     volumes:
@@ -97,6 +109,8 @@ services:
       - /usr/share/kibana/data
       - /usr/share/kibana/optimize
       - /tmp
+    security_opt:
+      - no-new-privileges:true
     links:
       - elasticsearch:es #可以用es这个域名访问elasticsearch服务
     depends_on:
@@ -111,6 +125,8 @@ services:
     read_only: true
     tmpfs:
       - /tmp
+    security_opt:
+      - no-new-privileges:true
     volumes:
       - /mydata/mongo/db:/data/db #数据文件目录挂载
     ports:
@@ -123,6 +139,8 @@ services:
     tmpfs:
       - /tmp
       - /root/.minio
+    security_opt:
+      - no-new-privileges:true
     volumes:
       - /mydata/minio/data:/data #数据目录挂载
     environment:
