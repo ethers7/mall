@@ -3,6 +3,9 @@ services:
   mall-admin:
     image: mall/mall-admin:1.0-SNAPSHOT
     container_name: mall-admin
+    read_only: true
+    tmpfs:
+      - /tmp
     ports:
       - 8080:8080
     volumes:
@@ -15,6 +18,9 @@ services:
   mall-search:
     image: mall/mall-search:1.0-SNAPSHOT
     container_name: mall-search
+    read_only: true
+    tmpfs:
+      - /tmp
     ports:
       - 8081:8081
     volumes:
@@ -28,6 +34,9 @@ services:
   mall-portal:
     image: mall/mall-portal:1.0-SNAPSHOT
     container_name: mall-portal
+    read_only: true
+    tmpfs:
+      - /tmp
     ports:
       - 8085:8085
     volumes:
