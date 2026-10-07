@@ -18,6 +18,7 @@ import org.springframework.stereotype.Service;
 import jakarta.servlet.http.HttpServletRequest;
 import java.text.SimpleDateFormat;
 import java.util.Date;
+import java.util.regex.Pattern;
 
 /**
  * Oss对象存储管理Service实现类
@@ -27,6 +28,10 @@ import java.util.Date;
 public class OssServiceImpl implements OssService {
 
 	private static final Logger LOGGER = LoggerFactory.getLogger(OssServiceImpl.class);
+	// 对象存储key的安全白名单：字母、数字、点、下划线、中划线、斜杠
+	private static final Pattern FILENAME_PATTERN = Pattern.compile("^[A-Za-z0-9_\\-./]+$");
+	// 基本的MIME类型格式校验
+	private static final Pattern MIME_TYPE_PATTERN = Pattern.compile("^[a-zA-Z0-9][a-zA-Z0-9!#$&.+\\-^_]*/[a-zA-Z0-9][a-zA-Z0-9!#$&.+\\-^_]*$");
 	@Value("${aliyun.oss.policy.expire}")
 	private int ALIYUN_OSS_EXPIRE;
 	@Value("${aliyun.oss.maxSize}")
@@ -90,13 +95,62 @@ public class OssServiceImpl implements OssService {
 	public OssCallbackResult callback(HttpServletRequest request) {
 		OssCallbackResult result= new OssCallbackResult();
 		String filename = request.getParameter("filename");
-		filename = "http://".concat(ALIYUN_OSS_BUCKET_NAME).concat(".").concat(ALIYUN_OSS_ENDPOINT).concat("/").concat(filename);
-		result.setFilename(filename);
-		result.setSize(request.getParameter("size"));
-		result.setMimeType(request.getParameter("mimeType"));
-		result.setWidth(request.getParameter("width"));
-		result.setHeight(request.getParameter("height"));
+		if (isValidFilename(filename)) {
+			filename = "http://".concat(ALIYUN_OSS_BUCKET_NAME).concat(".").concat(ALIYUN_OSS_ENDPOINT).concat("/").concat(filename);
+			result.setFilename(filename);
+		} else {
+			LOGGER.warn("OSS回调参数filename校验失败，已忽略：{}", filename);
+		}
+		result.setSize(validateNonNegativeInteger(request.getParameter("size"), "size"));
+		String mimeType = request.getParameter("mimeType");
+		if (isValidMimeType(mimeType)) {
+			result.setMimeType(mimeType);
+		} else {
+			LOGGER.warn("OSS回调参数mimeType校验失败，已忽略：{}", mimeType);
+		}
+		result.setWidth(validateNonNegativeInteger(request.getParameter("width"), "width"));
+		result.setHeight(validateNonNegativeInteger(request.getParameter("height"), "height"));
 		return result;
+	}
+
+	/**
+	 * 校验对象存储文件名是否安全：非空、不含路径穿越/控制字符、且匹配安全白名单
+	 */
+	private boolean isValidFilename(String filename) {
+		if (filename == null || filename.isEmpty()) {
+			return false;
+		}
+		if (filename.contains("..") || filename.contains("\n") || filename.contains("\r")) {
+			return false;
+		}
+		return FILENAME_PATTERN.matcher(filename).matches();
+	}
+
+	/**
+	 * 校验MIME类型格式是否合法
+	 */
+	private boolean isValidMimeType(String mimeType) {
+		return mimeType != null && MIME_TYPE_PATTERN.matcher(mimeType).matches();
+	}
+
+	/**
+	 * 校验参数是否为非负整数（用于size/width/height），非法则返回null
+	 */
+	private String validateNonNegativeInteger(String value, String fieldName) {
+		if (value == null) {
+			return null;
+		}
+		try {
+			long parsed = Long.parseLong(value.trim());
+			if (parsed < 0) {
+				LOGGER.warn("OSS回调参数{}为负数，已忽略：{}", fieldName, value);
+				return null;
+			}
+			return value;
+		} catch (NumberFormatException e) {
+			LOGGER.warn("OSS回调参数{}格式非法，已忽略：{}", fieldName, value);
+			return null;
+		}
 	}
 
 }
