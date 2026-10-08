@@ -5,6 +5,7 @@ import com.aliyun.oss.OSSClient;
 import com.aliyun.oss.common.utils.BinaryUtil;
 import com.aliyun.oss.model.MatchMode;
 import com.aliyun.oss.model.PolicyConditions;
+import com.macro.mall.common.exception.Asserts;
 import com.macro.mall.dto.OssCallbackParam;
 import com.macro.mall.dto.OssCallbackResult;
 import com.macro.mall.dto.OssPolicyResult;
@@ -89,13 +90,33 @@ public class OssServiceImpl implements OssService {
 	@Override
 	public OssCallbackResult callback(HttpServletRequest request) {
 		OssCallbackResult result= new OssCallbackResult();
+		// filename/size/mimeType 是阿里云OSS回调body模板中始终会填充的字段（见policy()中callbackBody配置），
+		// 对任意成功的对象上传都一定存在合法取值；因此一旦校验失败即可判定回调被伪造或被篡改，
+		// 直接拒绝处理（抛出ApiException由GlobalExceptionHandler转为失败响应），而不是静默降级继续执行。
 		String filename = sanitizeFilename(request.getParameter("filename"));
+		if (filename.isEmpty()) {
+			Asserts.fail("OSS回调文件名非法或缺失，已拒绝处理");
+		}
+		String size = validatePositiveLong(request.getParameter("size"));
+		if (size == null) {
+			Asserts.fail("OSS回调文件大小参数非法或缺失，已拒绝处理");
+		}
+		String mimeType = validateMimeType(request.getParameter("mimeType"));
+		if (mimeType == null) {
+			Asserts.fail("OSS回调mimeType参数非法或缺失，已拒绝处理");
+		}
+		// width/height 来自回调模板中的${imageInfo.width}/${imageInfo.height}，仅当上传对象是OSS可识别的图片格式时
+		// 才会被填充为有效数值；非图片类对象（如视频、文档等本系统也通过同一回调上传的文件）上传成功时这两个字段
+		// 本身就不会有合法取值。因此对这两个字段沿用“非法值归一化为null”的降级处理而非整体拒绝回调，
+		// 避免把非图片类正常上传误判为非法请求而拒绝——这与filename/size/mimeType的拒绝策略不同，是刻意的设计取舍。
+		String width = validatePositiveLong(request.getParameter("width"));
+		String height = validatePositiveLong(request.getParameter("height"));
 		filename = "http://".concat(ALIYUN_OSS_BUCKET_NAME).concat(".").concat(ALIYUN_OSS_ENDPOINT).concat("/").concat(filename);
 		result.setFilename(filename);
-		result.setSize(validatePositiveLong(request.getParameter("size")));
-		result.setMimeType(validateMimeType(request.getParameter("mimeType")));
-		result.setWidth(validatePositiveLong(request.getParameter("width")));
-		result.setHeight(validatePositiveLong(request.getParameter("height")));
+		result.setSize(size);
+		result.setMimeType(mimeType);
+		result.setWidth(width);
+		result.setHeight(height);
 		return result;
 	}
 
