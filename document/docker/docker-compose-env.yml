@@ -6,6 +6,8 @@ services:
     command: mysqld --character-set-server=utf8mb4 --collation-server=utf8mb4_unicode_ci
     restart: always
     read_only: true
+    security_opt:
+      - no-new-privileges:true
     environment:
       MYSQL_ROOT_PASSWORD: root #设置root帐号密码
     ports:
@@ -22,6 +24,8 @@ services:
     container_name: redis
     command: redis-server --appendonly yes
     read_only: true
+    security_opt:
+      - no-new-privileges:true
     volumes:
       - /mydata/redis/data:/data #数据文件目录挂载
     tmpfs:
@@ -32,6 +36,8 @@ services:
     image: nginx:1.22
     container_name: nginx
     read_only: true
+    security_opt:
+      - no-new-privileges:true
     volumes:
       - /mydata/nginx/conf:/etc/nginx #配置文件目录挂载
       - /mydata/nginx/html:/usr/share/nginx/html #静态资源根目录挂载
@@ -46,6 +52,8 @@ services:
     image: rabbitmq:3.9.11-management
     container_name: rabbitmq
     read_only: true
+    security_opt:
+      - no-new-privileges:true
     volumes:
       - /mydata/rabbitmq/data:/var/lib/rabbitmq #数据文件目录挂载
     tmpfs:
@@ -58,6 +66,8 @@ services:
     image: elasticsearch:7.17.3
     container_name: elasticsearch
     read_only: true
+    security_opt:
+      - no-new-privileges:true
     environment:
       - "cluster.name=elasticsearch" #设置集群名称为elasticsearch
       - "discovery.type=single-node" #以单一节点模式启动
@@ -75,6 +85,8 @@ services:
     image: logstash:7.17.3
     container_name: logstash
     read_only: true
+    security_opt:
+      - no-new-privileges:true
     environment:
       - TZ=Asia/Shanghai
     volumes:
@@ -96,6 +108,8 @@ services:
     image: kibana:7.17.3
     container_name: kibana
     read_only: true
+    security_opt:
+      - no-new-privileges:true
     links:
       - elasticsearch:es #可以用es这个域名访问elasticsearch服务
     depends_on:
@@ -112,6 +126,8 @@ services:
     image: mongo:4
     container_name: mongo
     read_only: true
+    security_opt:
+      - no-new-privileges:true
     volumes:
       - /mydata/mongo/db:/data/db #数据文件目录挂载
     tmpfs:
@@ -123,6 +139,8 @@ services:
     container_name: minio
     command: server /data --console-address ":9001" #指定数据目录及console运行端口启动
     read_only: true
+    security_opt:
+      - no-new-privileges:true
     volumes:
       - /mydata/minio/data:/data #数据目录挂载
     tmpfs:
