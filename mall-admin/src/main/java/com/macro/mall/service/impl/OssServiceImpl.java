@@ -89,14 +89,52 @@ public class OssServiceImpl implements OssService {
 	@Override
 	public OssCallbackResult callback(HttpServletRequest request) {
 		OssCallbackResult result= new OssCallbackResult();
-		String filename = request.getParameter("filename");
+		String filename = sanitizeFilename(request.getParameter("filename"));
 		filename = "http://".concat(ALIYUN_OSS_BUCKET_NAME).concat(".").concat(ALIYUN_OSS_ENDPOINT).concat("/").concat(filename);
 		result.setFilename(filename);
-		result.setSize(request.getParameter("size"));
-		result.setMimeType(request.getParameter("mimeType"));
-		result.setWidth(request.getParameter("width"));
-		result.setHeight(request.getParameter("height"));
+		result.setSize(validatePositiveLong(request.getParameter("size")));
+		result.setMimeType(validateMimeType(request.getParameter("mimeType")));
+		result.setWidth(validatePositiveLong(request.getParameter("width")));
+		result.setHeight(validatePositiveLong(request.getParameter("height")));
 		return result;
+	}
+
+	/**
+	 * 校验回调传入的文件名，防止路径穿越等非法字符
+	 */
+	private String sanitizeFilename(String filename) {
+		if (filename == null || filename.isEmpty() || filename.length() > 255) {
+			return "";
+		}
+		if (filename.contains("..") || filename.contains("/") || filename.contains("\\")) {
+			LOGGER.warn("OSS回调文件名包含非法字符，已拒绝：{}", filename);
+			return "";
+		}
+		if (!filename.matches("[a-zA-Z0-9._-]+")) {
+			LOGGER.warn("OSS回调文件名格式非法，已拒绝：{}", filename);
+			return "";
+		}
+		return filename;
+	}
+
+	/**
+	 * 校验回调传入的数值型参数（size/width/height），非合法非负整数时返回null
+	 */
+	private String validatePositiveLong(String value) {
+		if (value == null || !value.matches("\\d{1,18}")) {
+			return null;
+		}
+		return value;
+	}
+
+	/**
+	 * 校验回调传入的mimeType，必须满足type/subtype的基本格式
+	 */
+	private String validateMimeType(String mimeType) {
+		if (mimeType == null || !mimeType.matches("[a-zA-Z0-9.+-]+/[a-zA-Z0-9.+-]+")) {
+			return null;
+		}
+		return mimeType;
 	}
 
 }
