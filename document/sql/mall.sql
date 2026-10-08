@@ -2170,23 +2170,24 @@ CREATE TABLE `ums_admin`  (
 -- ----------------------------
 -- Records of ums_admin
 -- ----------------------------
--- SECURITY NOTICE: the password hashes below are INTENTIONAL PLACEHOLDERS,
--- not real bcrypt hashes. They are a fixed, non-functional marker string
--- ("$2a$10$PLACEHOLDERINVALIDHASHNOTUSABLE..."), so no password will ever
--- match them and these seeded accounts fail closed (login always fails)
--- until an operator provisions real credentials. Do NOT replace them with
--- a real bcrypt hash and commit it to this file. To use these demo
--- accounts, set a real password via the application's user-management
+-- SECURITY NOTICE: the password column for these seeded accounts is NULL.
+-- `ums_admin`.`password` is nullable (varchar(64) NULL DEFAULT NULL), and
+-- Spring Security's BCryptPasswordEncoder.matches(raw, encoded) treats a
+-- null/empty encoded password as a non-match and returns false (fails
+-- closed) without throwing, so login against these accounts always fails
+-- until an operator provisions real credentials. Do NOT populate this
+-- column with a hardcoded bcrypt hash committed to this file. To use these
+-- demo accounts, set a real password via the application's user-management
 -- flow (e.g. the admin "update password" API) or an environment-driven
 -- seeding step performed after import — never by editing this dump.
-INSERT INTO `ums_admin` VALUES (1, 'test', '$2a$10$PLACEHOLDERINVALIDHASHNOTUSABLE9999999999999999999999', 'https://macro-oss.oss-cn-shenzhen.aliyuncs.com/mall/icon/github_icon_02.png', 'test@qq.com', '测试账号', NULL, '2018-09-29 13:55:30', '2018-09-29 13:55:39', 1);
-INSERT INTO `ums_admin` VALUES (3, 'admin', '$2a$10$PLACEHOLDERINVALIDHASHNOTUSABLE9999999999999999999999', 'https://macro-oss.oss-cn-shenzhen.aliyuncs.com/mall/icon/github_icon_01.png', 'admin@163.com', '系统管理员', '系统管理员', '2018-10-08 13:32:47', '2019-04-20 12:45:16', 1);
-INSERT INTO `ums_admin` VALUES (4, 'macro', '$2a$10$PLACEHOLDERINVALIDHASHNOTUSABLE9999999999999999999999', 'https://macro-oss.oss-cn-shenzhen.aliyuncs.com/mall/icon/github_icon_01.png', 'macro@qq.com', 'macro', 'macro专用', '2019-10-06 15:53:51', '2020-02-03 14:55:55', 1);
-INSERT INTO `ums_admin` VALUES (6, 'productAdmin', '$2a$10$PLACEHOLDERINVALIDHASHNOTUSABLE9999999999999999999999', 'https://macro-oss.oss-cn-shenzhen.aliyuncs.com/mall/icon/github_icon_03.png', 'product@qq.com', '商品管理员', '只有商品权限', '2020-02-07 16:15:08', NULL, 1);
-INSERT INTO `ums_admin` VALUES (7, 'orderAdmin', '$2a$10$PLACEHOLDERINVALIDHASHNOTUSABLE9999999999999999999999', 'https://macro-oss.oss-cn-shenzhen.aliyuncs.com/mall/icon/github_icon_04.png', 'order@qq.com', '订单管理员', '只有订单管理权限', '2020-02-07 16:15:50', NULL, 1);
-INSERT INTO `ums_admin` VALUES (8, 'test123', '$2a$10$PLACEHOLDERINVALIDHASHNOTUSABLE9999999999999999999999', 'string', 'abc@qq.com', 'string', 'string', '2022-08-07 14:45:42', NULL, 1);
-INSERT INTO `ums_admin` VALUES (9, 'test256', '$2a$10$PLACEHOLDERINVALIDHASHNOTUSABLE9999999999999999999999', 'string', 'abc@qq.com', 'string', 'string', '2022-08-07 14:52:57', NULL, 1);
-INSERT INTO `ums_admin` VALUES (10, 'test1267', '$2a$10$PLACEHOLDERINVALIDHASHNOTUSABLE9999999999999999999999', NULL, 'test1267@qq.com', 'test1267', 'test1267', '2023-01-04 16:13:34', NULL, 1);
+INSERT INTO `ums_admin` VALUES (1, 'test', NULL, 'https://macro-oss.oss-cn-shenzhen.aliyuncs.com/mall/icon/github_icon_02.png', 'test@qq.com', '测试账号', NULL, '2018-09-29 13:55:30', '2018-09-29 13:55:39', 1);
+INSERT INTO `ums_admin` VALUES (3, 'admin', NULL, 'https://macro-oss.oss-cn-shenzhen.aliyuncs.com/mall/icon/github_icon_01.png', 'admin@163.com', '系统管理员', '系统管理员', '2018-10-08 13:32:47', '2019-04-20 12:45:16', 1);
+INSERT INTO `ums_admin` VALUES (4, 'macro', NULL, 'https://macro-oss.oss-cn-shenzhen.aliyuncs.com/mall/icon/github_icon_01.png', 'macro@qq.com', 'macro', 'macro专用', '2019-10-06 15:53:51', '2020-02-03 14:55:55', 1);
+INSERT INTO `ums_admin` VALUES (6, 'productAdmin', NULL, 'https://macro-oss.oss-cn-shenzhen.aliyuncs.com/mall/icon/github_icon_03.png', 'product@qq.com', '商品管理员', '只有商品权限', '2020-02-07 16:15:08', NULL, 1);
+INSERT INTO `ums_admin` VALUES (7, 'orderAdmin', NULL, 'https://macro-oss.oss-cn-shenzhen.aliyuncs.com/mall/icon/github_icon_04.png', 'order@qq.com', '订单管理员', '只有订单管理权限', '2020-02-07 16:15:50', NULL, 1);
+INSERT INTO `ums_admin` VALUES (8, 'test123', NULL, 'string', 'abc@qq.com', 'string', 'string', '2022-08-07 14:45:42', NULL, 1);
+INSERT INTO `ums_admin` VALUES (9, 'test256', NULL, 'string', 'abc@qq.com', 'string', 'string', '2022-08-07 14:52:57', NULL, 1);
+INSERT INTO `ums_admin` VALUES (10, 'test1267', NULL, NULL, 'test1267@qq.com', 'test1267', 'test1267', '2023-01-04 16:13:34', NULL, 1);
 
 -- ----------------------------
 -- Table structure for ums_admin_login_log
@@ -2746,26 +2747,27 @@ CREATE TABLE `ums_member`  (
 -- ----------------------------
 -- Records of ums_member
 -- ----------------------------
--- SECURITY NOTICE: the password hashes below are INTENTIONAL PLACEHOLDERS,
--- not real bcrypt hashes. They are a fixed, non-functional marker string
--- ("$2a$10$PLACEHOLDERINVALIDHASHNOTUSABLE..."), so no password will ever
--- match them and these seeded accounts fail closed (login always fails)
--- until an operator provisions real credentials. Do NOT replace them with
--- a real bcrypt hash and commit it to this file. To use these demo
--- accounts, set a real password via the application's user-management
+-- SECURITY NOTICE: the password column for these seeded accounts is NULL.
+-- `ums_member`.`password` is nullable (varchar(64) NULL DEFAULT NULL), and
+-- Spring Security's BCryptPasswordEncoder.matches(raw, encoded) treats a
+-- null/empty encoded password as a non-match and returns false (fails
+-- closed) without throwing, so login against these accounts always fails
+-- until an operator provisions real credentials. Do NOT populate this
+-- column with a hardcoded bcrypt hash committed to this file. To use these
+-- demo accounts, set a real password via the application's user-management
 -- flow (e.g. the member "register"/"update password" API) or an
 -- environment-driven seeding step performed after import — never by
 -- editing this dump.
-INSERT INTO `ums_member` VALUES (1, 4, 'test', '$2a$10$PLACEHOLDERINVALIDHASHNOTUSABLE9999999999999999999999', 'test', '18061581849', 1, '2018-08-02 10:35:44', 'https://macro-oss.oss-cn-shenzhen.aliyuncs.com/mall/icon/github_icon_03.png', 1, '2009-06-01', '上海', '学生', 'test', NULL, 3900, 1000, NULL, NULL);
-INSERT INTO `ums_member` VALUES (3, 4, 'windy', '$2a$10$PLACEHOLDERINVALIDHASHNOTUSABLE9999999999999999999999', 'windy', '18061581848', 1, '2018-08-03 16:46:38', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL);
-INSERT INTO `ums_member` VALUES (4, 4, 'zhengsan', '$2a$10$PLACEHOLDERINVALIDHASHNOTUSABLE9999999999999999999999', 'zhengsan', '18061581847', 1, '2018-11-12 14:12:04', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL);
-INSERT INTO `ums_member` VALUES (5, 4, 'lisi', '$2a$10$PLACEHOLDERINVALIDHASHNOTUSABLE9999999999999999999999', 'lisi', '18061581841', 1, '2018-11-12 14:12:38', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL);
-INSERT INTO `ums_member` VALUES (6, 4, 'wangwu', '$2a$10$PLACEHOLDERINVALIDHASHNOTUSABLE9999999999999999999999', 'wangwu', '18061581842', 1, '2018-11-12 14:13:09', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL);
-INSERT INTO `ums_member` VALUES (7, 4, 'lion', '$2a$10$PLACEHOLDERINVALIDHASHNOTUSABLE9999999999999999999999', 'lion', '18061581845', 1, '2018-11-12 14:21:39', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL);
-INSERT INTO `ums_member` VALUES (8, 4, 'shari', '$2a$10$PLACEHOLDERINVALIDHASHNOTUSABLE9999999999999999999999', 'shari', '18061581844', 1, '2018-11-12 14:22:00', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL);
-INSERT INTO `ums_member` VALUES (9, 4, 'aewen', '$2a$10$PLACEHOLDERINVALIDHASHNOTUSABLE9999999999999999999999', 'aewen', '18061581843', 1, '2018-11-12 14:22:55', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL);
-INSERT INTO `ums_member` VALUES (10, 4, 'guest', '$2a$10$PLACEHOLDERINVALIDHASHNOTUSABLE9999999999999999999999', NULL, '18911111111', 1, '2020-03-14 14:52:18', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL);
-INSERT INTO `ums_member` VALUES (11, 4, 'member', '$2a$10$PLACEHOLDERINVALIDHASHNOTUSABLE9999999999999999999999', 'member', '18961511111', 1, '2023-05-11 15:22:38', 'https://macro-oss.oss-cn-shenzhen.aliyuncs.com/mall/icon/github_icon_02.png', 1, '2009-06-01', '上海', '学生', 'member', NULL, 5000, 1000, NULL, NULL);
+INSERT INTO `ums_member` VALUES (1, 4, 'test', NULL, 'test', '18061581849', 1, '2018-08-02 10:35:44', 'https://macro-oss.oss-cn-shenzhen.aliyuncs.com/mall/icon/github_icon_03.png', 1, '2009-06-01', '上海', '学生', 'test', NULL, 3900, 1000, NULL, NULL);
+INSERT INTO `ums_member` VALUES (3, 4, 'windy', NULL, 'windy', '18061581848', 1, '2018-08-03 16:46:38', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL);
+INSERT INTO `ums_member` VALUES (4, 4, 'zhengsan', NULL, 'zhengsan', '18061581847', 1, '2018-11-12 14:12:04', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL);
+INSERT INTO `ums_member` VALUES (5, 4, 'lisi', NULL, 'lisi', '18061581841', 1, '2018-11-12 14:12:38', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL);
+INSERT INTO `ums_member` VALUES (6, 4, 'wangwu', NULL, 'wangwu', '18061581842', 1, '2018-11-12 14:13:09', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL);
+INSERT INTO `ums_member` VALUES (7, 4, 'lion', NULL, 'lion', '18061581845', 1, '2018-11-12 14:21:39', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL);
+INSERT INTO `ums_member` VALUES (8, 4, 'shari', NULL, 'shari', '18061581844', 1, '2018-11-12 14:22:00', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL);
+INSERT INTO `ums_member` VALUES (9, 4, 'aewen', NULL, 'aewen', '18061581843', 1, '2018-11-12 14:22:55', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL);
+INSERT INTO `ums_member` VALUES (10, 4, 'guest', NULL, NULL, '18911111111', 1, '2020-03-14 14:52:18', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL);
+INSERT INTO `ums_member` VALUES (11, 4, 'member', NULL, 'member', '18961511111', 1, '2023-05-11 15:22:38', 'https://macro-oss.oss-cn-shenzhen.aliyuncs.com/mall/icon/github_icon_02.png', 1, '2009-06-01', '上海', '学生', 'member', NULL, 5000, 1000, NULL, NULL);
 
 -- ----------------------------
 -- Table structure for ums_member_level
