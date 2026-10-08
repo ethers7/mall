@@ -5,8 +5,22 @@ set -eu
 
 BASE="${BASE_URL:-http://127.0.0.1:8080}"
 BASE="${BASE%/}"
+# SECURITY: document/sql/mall.sql no longer ships a working bcrypt hash for
+# the seeded demo accounts (see security notice in that file) — the dump is
+# fail-closed by design. MALL_ADMIN_USER/MALL_ADMIN_PASS must be supplied by
+# the environment (secrets manager / CI secret) and point at an account whose
+# real password was provisioned at runtime via the admin API, never via a
+# hash committed to the SQL dump.
 ADMIN_USER="${MALL_ADMIN_USER:-admin}"
-ADMIN_PASS="${MALL_ADMIN_PASS:-macro123}"
+if [ -z "${MALL_ADMIN_PASS:-}" ]; then
+  echo "MALL_ADMIN_PASS is not set. The seeded admin password hash in" >&2
+  echo "document/sql/mall.sql is an intentional non-functional placeholder," >&2
+  echo "so no default/demo password is usable. Set MALL_ADMIN_USER and" >&2
+  echo "MALL_ADMIN_PASS to credentials provisioned at runtime before running" >&2
+  echo "this e2e gate." >&2
+  exit 1
+fi
+ADMIN_PASS="${MALL_ADMIN_PASS}"
 OUTDIR="${E2E_JUNIT_DIR:-test-results}"
 mkdir -p "$OUTDIR"
 OUT="$OUTDIR/functional-junit.xml"

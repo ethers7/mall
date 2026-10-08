@@ -58,8 +58,28 @@ public class AlipayController {
         Map<String, String> params = new HashMap<>();
         Map<String, String[]> requestParams = request.getParameterMap();
         for (String name : requestParams.keySet()) {
-            params.put(name, request.getParameter(name));
+            String[] values = requestParams.get(name);
+            if (name == null || values == null || values.length == 0) {
+                continue;
+            }
+            // 按照支付宝SDK官方notify示例的做法：同名参数以逗号拼接所有取值，
+            // 避免直接信任单一getParameter()结果（防止参数污染），并跳过空值
+            StringBuilder valueStr = new StringBuilder();
+            for (int i = 0; i < values.length; i++) {
+                if (values[i] == null || values[i].isEmpty()) {
+                    continue;
+                }
+                if (valueStr.length() > 0) {
+                    valueStr.append(',');
+                }
+                valueStr.append(values[i]);
+            }
+            if (valueStr.length() > 0) {
+                params.put(name, valueStr.toString());
+            }
         }
+        // 注意：alipayService.notify(params) 内部会使用支付宝公钥对params做签名校验（AlipaySignature.rsaCheckV1），
+        // 只有签名校验通过后才会信任并使用其中的业务字段（如trade_status/out_trade_no）
         return alipayService.notify(params);
     }
 
