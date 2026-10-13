@@ -18,6 +18,7 @@ import org.springframework.stereotype.Service;
 import jakarta.servlet.http.HttpServletRequest;
 import java.text.SimpleDateFormat;
 import java.util.Date;
+import java.util.regex.Pattern;
 
 /**
  * Oss对象存储管理Service实现类
@@ -27,6 +28,9 @@ import java.util.Date;
 public class OssServiceImpl implements OssService {
 
 	private static final Logger LOGGER = LoggerFactory.getLogger(OssServiceImpl.class);
+	// 简单校验mimeType是否符合"type/subtype"格式
+	private static final Pattern MIME_TYPE_PATTERN =
+			Pattern.compile("^[a-zA-Z0-9][a-zA-Z0-9!#$&^_.+-]*/[a-zA-Z0-9][a-zA-Z0-9!#$&^_.+-]*$");
 	@Value("${aliyun.oss.policy.expire}")
 	private int ALIYUN_OSS_EXPIRE;
 	@Value("${aliyun.oss.maxSize}")
@@ -89,14 +93,56 @@ public class OssServiceImpl implements OssService {
 	@Override
 	public OssCallbackResult callback(HttpServletRequest request) {
 		OssCallbackResult result= new OssCallbackResult();
-		String filename = request.getParameter("filename");
+		String filename = sanitizeFilename(request.getParameter("filename"));
 		filename = "http://".concat(ALIYUN_OSS_BUCKET_NAME).concat(".").concat(ALIYUN_OSS_ENDPOINT).concat("/").concat(filename);
 		result.setFilename(filename);
-		result.setSize(request.getParameter("size"));
-		result.setMimeType(request.getParameter("mimeType"));
-		result.setWidth(request.getParameter("width"));
-		result.setHeight(request.getParameter("height"));
+		result.setSize(sanitizeNumericParam(request.getParameter("size")));
+		result.setMimeType(sanitizeMimeType(request.getParameter("mimeType")));
+		result.setWidth(sanitizeNumericParam(request.getParameter("width")));
+		result.setHeight(sanitizeNumericParam(request.getParameter("height")));
 		return result;
+	}
+
+	/**
+	 * 校验OSS回调中的filename参数，拒绝空值及路径穿越、非法分隔符等异常输入
+	 */
+	private String sanitizeFilename(String filename) {
+		if (filename == null || filename.trim().isEmpty()) {
+			LOGGER.warn("OSS回调中filename参数为空");
+			return "";
+		}
+		filename = filename.trim();
+		if (filename.contains("..") || filename.contains("\\")) {
+			LOGGER.warn("OSS回调中filename参数包含非法字符，已拒绝：{}", filename);
+			return "";
+		}
+		// 去除开头多余的"/"，避免拼接出协议相对或绝对路径
+		while (filename.startsWith("/")) {
+			filename = filename.substring(1);
+		}
+		return filename;
+	}
+
+	/**
+	 * 校验OSS回调中的mimeType参数是否符合"type/subtype"格式
+	 */
+	private String sanitizeMimeType(String mimeType) {
+		if (mimeType == null || !MIME_TYPE_PATTERN.matcher(mimeType.trim()).matches()) {
+			LOGGER.warn("OSS回调中mimeType参数格式非法：{}", mimeType);
+			return "";
+		}
+		return mimeType.trim();
+	}
+
+	/**
+	 * 校验OSS回调中的数值类参数（size/width/height），非法输入时回退为"0"
+	 */
+	private String sanitizeNumericParam(String value) {
+		if (value == null || !value.trim().matches("\\d+")) {
+			LOGGER.warn("OSS回调中数值参数格式非法：{}", value);
+			return "0";
+		}
+		return value.trim();
 	}
 
 }

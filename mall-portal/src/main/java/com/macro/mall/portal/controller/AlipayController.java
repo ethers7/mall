@@ -56,9 +56,19 @@ public class AlipayController {
     @RequestMapping(value = "/notify", method = RequestMethod.POST)
     public String notify(HttpServletRequest request){
         Map<String, String> params = new HashMap<>();
+        // 回调参数的真正安全校验由alipayService.notify内部的签名验签(AlipaySignature.rsaCheckV1)完成，
+        // 此处仅做防御性判空，避免畸形请求导致空指针异常
         Map<String, String[]> requestParams = request.getParameterMap();
-        for (String name : requestParams.keySet()) {
-            params.put(name, request.getParameter(name));
+        if (requestParams != null) {
+            for (String name : requestParams.keySet()) {
+                if (name == null) {
+                    continue;
+                }
+                String value = request.getParameter(name);
+                if (value != null) {
+                    params.put(name, value);
+                }
+            }
         }
         return alipayService.notify(params);
     }
