@@ -18,7 +18,10 @@ import java.io.IOException;
 public class RestAuthenticationEntryPoint implements AuthenticationEntryPoint {
     @Override
     public void commence(HttpServletRequest request, HttpServletResponse response, AuthenticationException authException) throws IOException {
-        response.setHeader("Access-Control-Allow-Origin", "*");
+        // CORS headers for this response are already handled by the application's
+        // global CorsFilter (see GlobalCorsConfig). Do not set a wildcard
+        // Access-Control-Allow-Origin header here (CWE-942): it would allow any
+        // untrusted origin to read this error response.
         response.setHeader("Cache-Control","no-cache");
         response.setCharacterEncoding("UTF-8");
         response.setContentType("application/json");
