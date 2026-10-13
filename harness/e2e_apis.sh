@@ -5,8 +5,12 @@ set -eu
 
 BASE="${BASE_URL:-http://127.0.0.1:8080}"
 BASE="${BASE%/}"
+# NOTE: default password matches the placeholder bcrypt hash seeded for
+# the 'admin' user in document/sql/mall.sql (rotated off the previously
+# committed real bcrypt hash). Override via MALL_ADMIN_PASS if the seed
+# data is re-rotated.
 ADMIN_USER="${MALL_ADMIN_USER:-admin}"
-ADMIN_PASS="${MALL_ADMIN_PASS:-macro123}"
+ADMIN_PASS="${MALL_ADMIN_PASS:-ChangeMe!2024}"
 OUTDIR="${E2E_JUNIT_DIR:-test-results}"
 mkdir -p "$OUTDIR"
 OUT="$OUTDIR/functional-junit.xml"
