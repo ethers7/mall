@@ -29,6 +29,11 @@ import java.util.Map;
 @RequestMapping("/alipay")
 public class AlipayController {
 
+    /**
+     * 防御性限制：支付宝异步回调参数数量上限，超出视为异常请求
+     */
+    private static final int MAX_NOTIFY_PARAM_COUNT = 100;
+
     @Autowired
     private AlipayConfig alipayConfig;
     @Autowired
@@ -55,9 +60,15 @@ public class AlipayController {
     @Operation(summary = "支付宝异步回调",description = "必须为POST请求，执行成功返回success，执行失败返回failure")
     @RequestMapping(value = "/notify", method = RequestMethod.POST)
     public String notify(HttpServletRequest request){
-        Map<String, String> params = new HashMap<>();
         Map<String, String[]> requestParams = request.getParameterMap();
+        if (requestParams == null || requestParams.isEmpty() || requestParams.size() > MAX_NOTIFY_PARAM_COUNT) {
+            return "failure";
+        }
+        Map<String, String> params = new HashMap<>();
         for (String name : requestParams.keySet()) {
+            if (name == null || name.isEmpty()) {
+                continue;
+            }
             params.put(name, request.getParameter(name));
         }
         return alipayService.notify(params);

@@ -5,6 +5,7 @@ import com.aliyun.oss.OSSClient;
 import com.aliyun.oss.common.utils.BinaryUtil;
 import com.aliyun.oss.model.MatchMode;
 import com.aliyun.oss.model.PolicyConditions;
+import com.macro.mall.common.exception.Asserts;
 import com.macro.mall.dto.OssCallbackParam;
 import com.macro.mall.dto.OssCallbackResult;
 import com.macro.mall.dto.OssPolicyResult;
@@ -86,16 +87,54 @@ public class OssServiceImpl implements OssService {
 		return result;
 	}
 
+	/**
+	 * 文件名（object key）合法性校验：禁止路径穿越、协议前缀及空白/控制字符
+	 */
+	private static final java.util.regex.Pattern FILENAME_PATTERN =
+			java.util.regex.Pattern.compile("^[A-Za-z0-9_\\-./]+$");
+	/**
+	 * 简单的 mimeType 格式校验：type/subtype
+	 */
+	private static final java.util.regex.Pattern MIME_TYPE_PATTERN =
+			java.util.regex.Pattern.compile("^[A-Za-z0-9.+\\-]+/[A-Za-z0-9.+\\-]+$");
+
+	/**
+	 * 校验并返回安全的数值型回调参数，非法或为空时返回 null
+	 */
+	private String sanitizeNumeric(String value) {
+		if (value == null || value.trim().isEmpty()) {
+			return null;
+		}
+		try {
+			Integer.parseInt(value.trim());
+			return value.trim();
+		} catch (NumberFormatException e) {
+			LOGGER.warn("OSS回调参数非数值，已忽略：{}", value);
+			return null;
+		}
+	}
+
 	@Override
 	public OssCallbackResult callback(HttpServletRequest request) {
 		OssCallbackResult result= new OssCallbackResult();
 		String filename = request.getParameter("filename");
-		filename = "http://".concat(ALIYUN_OSS_BUCKET_NAME).concat(".").concat(ALIYUN_OSS_ENDPOINT).concat("/").concat(filename);
+		if (filename == null || filename.trim().isEmpty()
+				|| filename.contains("..")
+				|| filename.contains("://")
+				|| !FILENAME_PATTERN.matcher(filename.trim()).matches()) {
+			Asserts.fail("非法的文件名参数");
+		}
+		filename = "http://".concat(ALIYUN_OSS_BUCKET_NAME).concat(".").concat(ALIYUN_OSS_ENDPOINT).concat("/").concat(filename.trim());
 		result.setFilename(filename);
-		result.setSize(request.getParameter("size"));
-		result.setMimeType(request.getParameter("mimeType"));
-		result.setWidth(request.getParameter("width"));
-		result.setHeight(request.getParameter("height"));
+		result.setSize(sanitizeNumeric(request.getParameter("size")));
+		String mimeType = request.getParameter("mimeType");
+		if (mimeType != null && MIME_TYPE_PATTERN.matcher(mimeType.trim()).matches()) {
+			result.setMimeType(mimeType.trim());
+		} else {
+			result.setMimeType(null);
+		}
+		result.setWidth(sanitizeNumeric(request.getParameter("width")));
+		result.setHeight(sanitizeNumeric(request.getParameter("height")));
 		return result;
 	}
 
