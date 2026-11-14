@@ -7,6 +7,7 @@ import com.aliyun.oss.model.MatchMode;
 import com.aliyun.oss.model.PolicyConditions;
 import com.macro.mall.common.exception.Asserts;
 import com.macro.mall.dto.OssCallbackParam;
+import com.macro.mall.dto.OssCallbackRequest;
 import com.macro.mall.dto.OssCallbackResult;
 import com.macro.mall.dto.OssPolicyResult;
 import com.macro.mall.service.OssService;
@@ -16,7 +17,8 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
-import jakarta.servlet.http.HttpServletRequest;
+import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.regex.Pattern;
@@ -93,16 +95,31 @@ public class OssServiceImpl implements OssService {
 	}
 
 	@Override
-	public OssCallbackResult callback(HttpServletRequest request) {
+	public OssCallbackResult callback(OssCallbackRequest param) {
 		OssCallbackResult result= new OssCallbackResult();
-		String filename = validateFilename(request.getParameter("filename"));
+		String filename = encodePathSegments(validateFilename(param.getFilename()));
 		filename = "http://".concat(ALIYUN_OSS_BUCKET_NAME).concat(".").concat(ALIYUN_OSS_ENDPOINT).concat("/").concat(filename);
 		result.setFilename(filename);
-		result.setSize(validateNumber(request.getParameter("size"), "size"));
-		result.setMimeType(validateMimeType(request.getParameter("mimeType")));
-		result.setWidth(validateNumber(request.getParameter("width"), "width"));
-		result.setHeight(validateNumber(request.getParameter("height"), "height"));
+		result.setSize(validateNumber(param.getSize(), "size"));
+		result.setMimeType(validateMimeType(param.getMimeType()));
+		result.setWidth(validateNumber(param.getWidth(), "width"));
+		result.setHeight(validateNumber(param.getHeight(), "height"));
 		return result;
+	}
+
+	/**
+	 * 对对象名的每个路径段做URL编码（普通ASCII文件名保持不变）
+	 */
+	private static String encodePathSegments(String filename) {
+		String[] segments = filename.split("/", -1);
+		StringBuilder sb = new StringBuilder();
+		for (int i = 0; i < segments.length; i++) {
+			if (i > 0) {
+				sb.append('/');
+			}
+			sb.append(URLEncoder.encode(segments[i], StandardCharsets.UTF_8).replace("+", "%20"));
+		}
+		return sb.toString();
 	}
 
 	/**

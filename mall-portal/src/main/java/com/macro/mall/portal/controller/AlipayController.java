@@ -10,9 +10,9 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestMethod;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseBody;
 
-import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import java.io.IOException;
 import java.util.HashMap;
@@ -59,17 +59,17 @@ public class AlipayController {
 
     @Operation(summary = "支付宝异步回调",description = "必须为POST请求，执行成功返回success，执行失败返回failure")
     @RequestMapping(value = "/notify", method = RequestMethod.POST)
-    public String notify(HttpServletRequest request){
+    public String notify(@RequestParam Map<String, String> requestParams){
         Map<String, String> params = new HashMap<>();
-        Map<String, String[]> requestParams = request.getParameterMap();
         if (requestParams.size() > MAX_NOTIFY_PARAMS) {
             return "failure";
         }
-        for (String name : requestParams.keySet()) {
+        for (Map.Entry<String, String> entry : requestParams.entrySet()) {
+            String name = entry.getKey();
+            String value = entry.getValue();
             if (name == null || !PARAM_NAME.matcher(name).matches()) {
                 return "failure";
             }
-            String value = request.getParameter(name);
             if (value != null && value.length() > MAX_PARAM_VALUE_LENGTH) {
                 return "failure";
             }
