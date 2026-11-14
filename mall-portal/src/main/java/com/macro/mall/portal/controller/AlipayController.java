@@ -17,6 +17,7 @@ import jakarta.servlet.http.HttpServletResponse;
 import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.regex.Pattern;
 
 /**
  * @auther macrozheng
@@ -28,6 +29,10 @@ import java.util.Map;
 @Tag(name = "AlipayController", description = "支付宝支付相关接口")
 @RequestMapping("/alipay")
 public class AlipayController {
+
+    private static final int MAX_NOTIFY_PARAMS = 100;
+    private static final int MAX_PARAM_VALUE_LENGTH = 8192;
+    private static final Pattern PARAM_NAME = Pattern.compile("^[A-Za-z0-9_]{1,64}$");
 
     @Autowired
     private AlipayConfig alipayConfig;
@@ -57,8 +62,18 @@ public class AlipayController {
     public String notify(HttpServletRequest request){
         Map<String, String> params = new HashMap<>();
         Map<String, String[]> requestParams = request.getParameterMap();
+        if (requestParams.size() > MAX_NOTIFY_PARAMS) {
+            return "failure";
+        }
         for (String name : requestParams.keySet()) {
-            params.put(name, request.getParameter(name));
+            if (name == null || !PARAM_NAME.matcher(name).matches()) {
+                return "failure";
+            }
+            String value = request.getParameter(name);
+            if (value != null && value.length() > MAX_PARAM_VALUE_LENGTH) {
+                return "failure";
+            }
+            params.put(name, value);
         }
         return alipayService.notify(params);
     }
