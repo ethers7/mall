@@ -20,6 +20,7 @@
 - 下载地址：https://dev.mysql.com/downloads/mysql/5.7.html#downloads
 - 下载后按提示进行安装
 - 导入document/sql下的mall.sql文件
+- 注意：mall.sql中的账号不再包含密码哈希（password列为NULL，默认无法登录）。导入后请通过环境变量提供密码并执行harness/seed_passwords.sh（需设置MALL_ADMIN_PASS），或通过/admin/register等接口自行创建账号
 
 ## redis
 
