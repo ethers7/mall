@@ -3,6 +3,8 @@ services:
   mysql:
     image: mysql:5.7
     container_name: mysql
+    security_opt:
+      - no-new-privileges:true
     command: mysqld --character-set-server=utf8mb4 --collation-server=utf8mb4_unicode_ci
     restart: always
     read_only: true #容器根文件系统只读
@@ -20,6 +22,8 @@ services:
   redis:
     image: redis:7
     container_name: redis
+    security_opt:
+      - no-new-privileges:true
     command: redis-server --appendonly yes
     read_only: true #容器根文件系统只读
     tmpfs:
@@ -31,6 +35,8 @@ services:
   nginx:
     image: nginx:1.22
     container_name: nginx
+    security_opt:
+      - no-new-privileges:true
     read_only: true #容器根文件系统只读
     tmpfs:
       - /tmp
@@ -45,6 +51,8 @@ services:
   rabbitmq:
     image: rabbitmq:3.9.11-management
     container_name: rabbitmq
+    security_opt:
+      - no-new-privileges:true
     read_only: true #容器根文件系统只读
     tmpfs:
       - /tmp
@@ -57,6 +65,8 @@ services:
   elasticsearch:
     image: elasticsearch:7.17.3
     container_name: elasticsearch
+    security_opt:
+      - no-new-privileges:true
     read_only: true #容器根文件系统只读
     tmpfs:
       - /tmp
@@ -74,6 +84,8 @@ services:
   logstash:
     image: logstash:7.17.3
     container_name: logstash
+    security_opt:
+      - no-new-privileges:true
     read_only: true #容器根文件系统只读
     tmpfs:
       - /tmp
@@ -95,6 +107,8 @@ services:
   kibana:
     image: kibana:7.17.3
     container_name: kibana
+    security_opt:
+      - no-new-privileges:true
     read_only: true #容器根文件系统只读
     tmpfs:
       - /tmp
@@ -110,6 +124,8 @@ services:
   mongo:
     image: mongo:4
     container_name: mongo
+    security_opt:
+      - no-new-privileges:true
     read_only: true #容器根文件系统只读
     tmpfs:
       - /tmp
@@ -120,6 +136,8 @@ services:
   minio:
     image: minio/minio
     container_name: minio
+    security_opt:
+      - no-new-privileges:true
     command: server /data --console-address ":9001" #指定数据目录及console运行端口启动
     read_only: true #容器根文件系统只读
     tmpfs:
