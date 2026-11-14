@@ -8,6 +8,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
+import org.springframework.security.config.Customizer;
 import org.springframework.security.authorization.AuthenticatedAuthorizationManager;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
@@ -54,6 +55,8 @@ public class SecurityConfig {
         )
         //关闭跨站请求防护
         .csrf(AbstractHttpConfigurer::disable)
+        //使用应用中统一配置的CorsFilter处理跨域，使401/403响应也携带受控的CORS头
+        .cors(Customizer.withDefaults())
         //修改Session生成策略为无状态会话
         .sessionManagement(configurer -> configurer.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
         //自定义权限拒绝处理类

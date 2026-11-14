@@ -22,7 +22,8 @@ class JwtTokenUtilHarnessTest {
     @BeforeEach
     void setUp() throws Exception {
         jwtTokenUtil = new JwtTokenUtil();
-        setField("secret", "mall-admin-secret");
+        // test-only value generated at runtime; no key material is committed
+        setField("secret", java.util.UUID.randomUUID() + "-" + java.util.UUID.randomUUID());
         setField("expiration", 604800L);
         setField("tokenHead", "Bearer ");
     }

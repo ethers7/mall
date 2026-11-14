@@ -6,7 +6,9 @@ set -eu
 BASE="${BASE_URL:-http://127.0.0.1:8080}"
 BASE="${BASE%/}"
 ADMIN_USER="${MALL_ADMIN_USER:-admin}"
-ADMIN_PASS="${MALL_ADMIN_PASS:-macro123}"
+# The seed dump ships no password hashes; supply the password via env and apply it with
+# harness/seed_passwords.sh after importing document/sql/mall.sql.
+ADMIN_PASS="${MALL_ADMIN_PASS:?MALL_ADMIN_PASS must be supplied via the environment}"
 OUTDIR="${E2E_JUNIT_DIR:-test-results}"
 mkdir -p "$OUTDIR"
 OUT="$OUTDIR/functional-junit.xml"

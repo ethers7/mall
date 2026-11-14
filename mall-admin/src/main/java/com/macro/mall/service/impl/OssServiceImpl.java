@@ -5,7 +5,9 @@ import com.aliyun.oss.OSSClient;
 import com.aliyun.oss.common.utils.BinaryUtil;
 import com.aliyun.oss.model.MatchMode;
 import com.aliyun.oss.model.PolicyConditions;
+import com.macro.mall.common.exception.Asserts;
 import com.macro.mall.dto.OssCallbackParam;
+import com.macro.mall.dto.OssCallbackRequest;
 import com.macro.mall.dto.OssCallbackResult;
 import com.macro.mall.dto.OssPolicyResult;
 import com.macro.mall.service.OssService;
@@ -15,9 +17,11 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
-import jakarta.servlet.http.HttpServletRequest;
+import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
 import java.text.SimpleDateFormat;
 import java.util.Date;
+import java.util.regex.Pattern;
 
 /**
  * Oss对象存储管理Service实现类
@@ -27,6 +31,10 @@ import java.util.Date;
 public class OssServiceImpl implements OssService {
 
 	private static final Logger LOGGER = LoggerFactory.getLogger(OssServiceImpl.class);
+	private static final int MAX_FILENAME_LENGTH = 1024;
+	private static final Pattern CONTROL_CHARS = Pattern.compile("[\\p{Cntrl}]");
+	private static final Pattern NON_NEGATIVE_INTEGER = Pattern.compile("^[0-9]{1,15}$");
+	private static final Pattern MIME_TYPE = Pattern.compile("^[A-Za-z0-9!#$&^_.+-]{1,127}/[A-Za-z0-9!#$&^_.+-]{1,127}$");
 	@Value("${aliyun.oss.policy.expire}")
 	private int ALIYUN_OSS_EXPIRE;
 	@Value("${aliyun.oss.maxSize}")
@@ -87,16 +95,71 @@ public class OssServiceImpl implements OssService {
 	}
 
 	@Override
-	public OssCallbackResult callback(HttpServletRequest request) {
+	public OssCallbackResult callback(OssCallbackRequest param) {
 		OssCallbackResult result= new OssCallbackResult();
-		String filename = request.getParameter("filename");
+		String filename = encodePathSegments(validateFilename(param.getFilename()));
 		filename = "http://".concat(ALIYUN_OSS_BUCKET_NAME).concat(".").concat(ALIYUN_OSS_ENDPOINT).concat("/").concat(filename);
 		result.setFilename(filename);
-		result.setSize(request.getParameter("size"));
-		result.setMimeType(request.getParameter("mimeType"));
-		result.setWidth(request.getParameter("width"));
-		result.setHeight(request.getParameter("height"));
+		result.setSize(validateNumber(param.getSize(), "size"));
+		result.setMimeType(validateMimeType(param.getMimeType()));
+		result.setWidth(validateNumber(param.getWidth(), "width"));
+		result.setHeight(validateNumber(param.getHeight(), "height"));
 		return result;
+	}
+
+	/**
+	 * 对对象名的每个路径段做URL编码（普通ASCII文件名保持不变）
+	 */
+	private static String encodePathSegments(String filename) {
+		String[] segments = filename.split("/", -1);
+		StringBuilder sb = new StringBuilder();
+		for (int i = 0; i < segments.length; i++) {
+			if (i > 0) {
+				sb.append('/');
+			}
+			sb.append(URLEncoder.encode(segments[i], StandardCharsets.UTF_8).replace("+", "%20"));
+		}
+		return sb.toString();
+	}
+
+	/**
+	 * 校验OSS回调的文件对象名：非空、长度受限、无控制字符/反斜杠/路径回退/前导斜杠
+	 */
+	private static String validateFilename(String filename) {
+		if (filename == null || filename.isEmpty() || filename.length() > MAX_FILENAME_LENGTH
+				|| filename.startsWith("/") || filename.indexOf('\\') >= 0
+				|| CONTROL_CHARS.matcher(filename).find()) {
+			Asserts.fail("非法的filename参数");
+		}
+		for (String segment : filename.split("/", -1)) {
+			if ("..".equals(segment) || ".".equals(segment)) {
+				Asserts.fail("非法的filename参数");
+			}
+		}
+		return filename;
+	}
+
+	/**
+	 * 校验数值参数：为空（如非图片文件无宽高）则原样返回，否则必须是有界的非负整数
+	 */
+	private static String validateNumber(String value, String name) {
+		if (value == null || value.isEmpty()) {
+			return value;
+		}
+		if (!NON_NEGATIVE_INTEGER.matcher(value).matches()) {
+			Asserts.fail("非法的" + name + "参数");
+		}
+		return value;
+	}
+
+	/**
+	 * 校验mimeType格式：type/subtype
+	 */
+	private static String validateMimeType(String mimeType) {
+		if (mimeType == null || !MIME_TYPE.matcher(mimeType).matches()) {
+			Asserts.fail("非法的mimeType参数");
+		}
+		return mimeType;
 	}
 
 }

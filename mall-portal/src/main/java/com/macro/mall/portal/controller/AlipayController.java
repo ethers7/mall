@@ -10,13 +10,14 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestMethod;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseBody;
 
-import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.regex.Pattern;
 
 /**
  * @auther macrozheng
@@ -28,6 +29,10 @@ import java.util.Map;
 @Tag(name = "AlipayController", description = "支付宝支付相关接口")
 @RequestMapping("/alipay")
 public class AlipayController {
+
+    private static final int MAX_NOTIFY_PARAMS = 100;
+    private static final int MAX_PARAM_VALUE_LENGTH = 8192;
+    private static final Pattern PARAM_NAME = Pattern.compile("^[A-Za-z0-9_]{1,64}$");
 
     @Autowired
     private AlipayConfig alipayConfig;
@@ -54,11 +59,21 @@ public class AlipayController {
 
     @Operation(summary = "支付宝异步回调",description = "必须为POST请求，执行成功返回success，执行失败返回failure")
     @RequestMapping(value = "/notify", method = RequestMethod.POST)
-    public String notify(HttpServletRequest request){
+    public String notify(@RequestParam Map<String, String> requestParams){
         Map<String, String> params = new HashMap<>();
-        Map<String, String[]> requestParams = request.getParameterMap();
-        for (String name : requestParams.keySet()) {
-            params.put(name, request.getParameter(name));
+        if (requestParams.size() > MAX_NOTIFY_PARAMS) {
+            return "failure";
+        }
+        for (Map.Entry<String, String> entry : requestParams.entrySet()) {
+            String name = entry.getKey();
+            String value = entry.getValue();
+            if (name == null || !PARAM_NAME.matcher(name).matches()) {
+                return "failure";
+            }
+            if (value != null && value.length() > MAX_PARAM_VALUE_LENGTH) {
+                return "failure";
+            }
+            params.put(name, value);
         }
         return alipayService.notify(params);
     }

@@ -3,6 +3,11 @@ services:
   mall-admin:
     image: mall/mall-admin:1.0-SNAPSHOT
     container_name: mall-admin
+    security_opt:
+      - no-new-privileges:true
+    read_only: true #容器根文件系统只读
+    tmpfs:
+      - /tmp
     ports:
       - 8080:8080
     volumes:
@@ -10,11 +15,17 @@ services:
       - /etc/localtime:/etc/localtime
     environment:
       - 'TZ="Asia/Shanghai"'
+      - JWT_SECRET=${JWT_SECRET:?JWT_SECRET must be set (at least 32 bytes)}
     external_links:
       - mysql:db #可以用db这个域名访问mysql服务
   mall-search:
     image: mall/mall-search:1.0-SNAPSHOT
     container_name: mall-search
+    security_opt:
+      - no-new-privileges:true
+    read_only: true #容器根文件系统只读
+    tmpfs:
+      - /tmp
     ports:
       - 8081:8081
     volumes:
@@ -28,6 +39,11 @@ services:
   mall-portal:
     image: mall/mall-portal:1.0-SNAPSHOT
     container_name: mall-portal
+    security_opt:
+      - no-new-privileges:true
+    read_only: true #容器根文件系统只读
+    tmpfs:
+      - /tmp
     ports:
       - 8085:8085
     volumes:
@@ -35,6 +51,7 @@ services:
       - /etc/localtime:/etc/localtime
     environment:
       - 'TZ="Asia/Shanghai"'
+      - JWT_SECRET=${JWT_SECRET:?JWT_SECRET must be set (at least 32 bytes)}
     external_links:
       - redis:redis #可以用redis这个域名访问redis服务
       - mongo:mongo #可以用mongo这个域名访问mongo服务
