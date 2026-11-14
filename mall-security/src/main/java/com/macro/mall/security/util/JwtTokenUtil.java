@@ -5,6 +5,7 @@ import cn.hutool.core.util.StrUtil;
 import cn.hutool.jwt.JWTUtil;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.InitializingBean;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.core.userdetails.UserDetails;
 
@@ -25,11 +26,18 @@ import java.util.Map;
  * Created by macro on 2018/4/26.
  * Refactored to use Hutool JWTUtil
  */
-public class JwtTokenUtil {
+public class JwtTokenUtil implements InitializingBean {
     private static final Logger LOGGER = LoggerFactory.getLogger(JwtTokenUtil.class);
     private static final String CLAIM_KEY_USERNAME = "sub";
     private static final String CLAIM_KEY_CREATED = "created";
-    @Value("${jwt.secret}")
+    /**
+     * HS512 签名密钥的最小长度（字节），不足则拒绝启动/签名
+     */
+    private static final int MIN_SECRET_BYTES = 32;
+    /**
+     * 密钥必须由环境变量 JWT_SECRET 提供，仓库中不再保存默认值
+     */
+    @Value("${jwt.secret:}")
     private String secret;
     @Value("${jwt.expiration}")
     private Long expiration;
@@ -37,10 +45,25 @@ public class JwtTokenUtil {
     private String tokenHead;
 
     /**
-     * 获取签名密钥
+     * 启动时校验密钥，缺失或过短则快速失败
+     */
+    @Override
+    public void afterPropertiesSet() {
+        getSigningKey();
+    }
+
+    /**
+     * 获取签名密钥（密钥缺失、为空白或长度不足时抛出异常，拒绝签名/验签）
      */
     private byte[] getSigningKey() {
-        return secret.getBytes(StandardCharsets.UTF_8);
+        if (StrUtil.isBlank(secret)) {
+            throw new IllegalStateException("JWT secret is not configured; set the JWT_SECRET environment variable");
+        }
+        byte[] key = secret.getBytes(StandardCharsets.UTF_8);
+        if (key.length < MIN_SECRET_BYTES) {
+            throw new IllegalStateException("JWT secret is too short; use at least " + MIN_SECRET_BYTES + " bytes");
+        }
+        return key;
     }
 
     /**
