@@ -4,6 +4,11 @@ FROM openjdk:17
 ADD mall-admin-1.0-SNAPSHOT.jar /mall-admin-1.0-SNAPSHOT.jar
 # 声明服务运行在8080端口
 EXPOSE 8080
+# 创建非root用户运行应用,并保证日志目录(/var/logs)可写
+RUN groupadd -r mall && useradd -r -g mall -d /nonexistent -s /sbin/nologin mall \
+    && mkdir -p /var/logs \
+    && chown -R mall:mall /var/logs
+USER mall
 # 指定docker容器启动时运行jar包
 ENTRYPOINT ["java", "-jar","/mall-admin-1.0-SNAPSHOT.jar"]
 # 指定维护者的名字
